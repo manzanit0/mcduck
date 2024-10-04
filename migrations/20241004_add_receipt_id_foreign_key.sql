@@ -1,0 +1,5 @@
+ALTER TABLE expenses
+ADD CONSTRAINT fk_receipt_id
+FOREIGN KEY (receipt_id) REFERENCES receipts(id)
+ON UPDATE CASCADE
+ON DELETE CASCADE;
