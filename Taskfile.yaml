@@ -63,6 +63,9 @@ tasks:
   deploy:
     desc: Deploys the local workspace version of the code of all services to railway.app
     prompt: Are you sure you want to deploy to railway.app?
+    preconditions:
+      - msg: Have you logged in to the railway CLI?
+        sh: railway whoami
     cmds:
       - railway up -s mcduck --detach
       - railway up -s tgram-bot --detach
@@ -70,6 +73,9 @@ tasks:
 
   rw-pgcli:
     desc: Connects to the railway.app cloud postgres database via "pgcli"
+    preconditions:
+      - msg: Have you logged in to the railway CLI?
+        sh: railway whoami
     vars:
       DATABASE_URL:
         sh: railway variables -s mcduck --json | jq -r .DATABASE_URL
@@ -80,6 +86,9 @@ tasks:
     desc: Runs migrations in the railway.app cloud environment.
     prompt: Are you sure you want to run migrations in the cloud?
     silent: false
+    preconditions:
+      - msg: Have you logged in to the railway CLI?
+        sh: railway whoami
     vars:
       PGHOST:
         sh: railway variables -s mcduck --json | jq -r .PGHOST
@@ -105,6 +114,9 @@ tasks:
     desc: Repairs migrations in the railway.app cloud environment.
     prompt: Are you sure you want to repair migrations in the cloud?
     silent: false
+    preconditions:
+      - msg: Have you logged in to the railway CLI?
+        sh: railway whoami
     vars:
       PGHOST:
         sh: railway variables -s mcduck --json | jq -r .PGHOST
@@ -125,3 +137,10 @@ tasks:
             -schemas=public \
             -connectRetries=60 \
             repair
+
+  rw-heaviest-receipts:
+    desc: Get the top 10 heaviest receipts in production
+    preconditions:
+      - msg: Have you logged in to the railway CLI?
+        sh: railway whoami
+    cmd: echo "select pg_size_pretty(length(receipt_image)::bigint) as filesize from receipts order by filesize asc limit 10;" | task rw-pgcli
