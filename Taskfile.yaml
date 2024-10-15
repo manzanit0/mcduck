@@ -16,7 +16,9 @@ tasks:
 
   gen-proto:
     desc: generate protobuf outputs via Buf
-    cmd: buf generate
+    cmds:
+      - buf generate --template buf.gen-api.yaml
+      - buf generate --template buf.gen-events.yaml
 
   format-proto:
     desc: format protobuf files

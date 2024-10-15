@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package receipt.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/manzanit0/mcduck/events/receipt.v1;receiptv1";
+
+message ReceiptCreated {
+  Receipt receipt = 1;
+  string user_email = 2;
+}
+
+message Receipt {
+  uint64 id = 1;
+  ReceiptStatus status = 2;
+  string vendor = 3;
+  google.protobuf.Timestamp date = 4;
+  bytes file = 5;
+  repeated Expense expenses = 6;
+}
+
+enum ListReceiptsSince {
+  LIST_RECEIPTS_SINCE_UNSPECIFIED = 0;
+  LIST_RECEIPTS_SINCE_CURRENT_MONTH = 1;
+  LIST_RECEIPTS_SINCE_PREVIOUS_MONTH = 2;
+  LIST_RECEIPTS_SINCE_ALL_TIME = 3;
+}
+
+enum ReceiptStatus {
+  RECEIPT_STATUS_UNSPECIFIED = 0;
+  RECEIPT_STATUS_PENDING_REVIEW = 1;
+  RECEIPT_STATUS_REVIEWED = 2;
+}
+
+message Expense {
+  uint64 id = 1;
+  google.protobuf.Timestamp date = 2;
+  string category = 3;
+  string subcategory = 4;
+  string description = 5;
+  uint64 amount = 6;
+}
