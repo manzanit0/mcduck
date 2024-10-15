@@ -9,5 +9,4 @@ lint:
     - PACKAGE_DIRECTORY_MATCH
 
 modules:
-  - path: api
-  - path: events
+  - path: proto
