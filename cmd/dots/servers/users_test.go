@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
-	usersv1 "github.com/manzanit0/mcduck/api/users.v1"
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
+	usersv1 "github.com/manzanit0/mcduck/gen/api/users.v1"
 	"github.com/manzanit0/mcduck/internal/pgtest"
 	"github.com/manzanit0/mcduck/internal/users"
 	"github.com/stretchr/testify/assert"

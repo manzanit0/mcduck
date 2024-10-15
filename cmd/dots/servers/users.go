@@ -9,8 +9,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
-	usersv1 "github.com/manzanit0/mcduck/api/users.v1"
-	"github.com/manzanit0/mcduck/api/users.v1/usersv1connect"
+	usersv1 "github.com/manzanit0/mcduck/gen/api/users.v1"
+	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
 	"github.com/manzanit0/mcduck/internal/users"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"

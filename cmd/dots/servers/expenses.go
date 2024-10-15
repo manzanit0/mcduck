@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/jmoiron/sqlx"
-	expensesv1 "github.com/manzanit0/mcduck/api/expenses.v1"
-	"github.com/manzanit0/mcduck/api/expenses.v1/expensesv1connect"
+	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
+	"github.com/manzanit0/mcduck/gen/api/expenses.v1/expensesv1connect"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )

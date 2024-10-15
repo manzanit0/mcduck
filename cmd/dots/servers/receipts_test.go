@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	receiptsv1 "github.com/manzanit0/mcduck/api/receipts.v1"
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
+	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
 	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/internal/pgtest"
 	"github.com/manzanit0/mcduck/internal/receipt"

@@ -11,8 +11,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/codes"
 
-	authv1 "github.com/manzanit0/mcduck/api/auth.v1"
-	"github.com/manzanit0/mcduck/api/auth.v1/authv1connect"
+	authv1 "github.com/manzanit0/mcduck/gen/api/auth.v1"
+	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"github.com/manzanit0/mcduck/pkg/xtrace"

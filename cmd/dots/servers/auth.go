@@ -7,8 +7,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jmoiron/sqlx"
-	authv1 "github.com/manzanit0/mcduck/api/auth.v1"
-	"github.com/manzanit0/mcduck/api/auth.v1/authv1connect"
+	authv1 "github.com/manzanit0/mcduck/gen/api/auth.v1"
+	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
 	"github.com/manzanit0/mcduck/internal/users"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/tgram"

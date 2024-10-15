@@ -13,10 +13,10 @@ import (
 	"connectrpc.com/otelconnect"
 	"github.com/rs/cors"
 
-	"github.com/manzanit0/mcduck/api/auth.v1/authv1connect"
-	"github.com/manzanit0/mcduck/api/receipts.v1/receiptsv1connect"
-	"github.com/manzanit0/mcduck/api/users.v1/usersv1connect"
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
+	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
+	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
+	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
 	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/micro"

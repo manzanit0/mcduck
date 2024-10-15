@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	expensesv1 "github.com/manzanit0/mcduck/api/expenses.v1"
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
+	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/pgtest"
 	"github.com/manzanit0/mcduck/internal/users"

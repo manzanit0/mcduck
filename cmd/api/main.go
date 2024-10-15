@@ -11,9 +11,9 @@ import (
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 
-	"github.com/manzanit0/mcduck/api/auth.v1/authv1connect"
-	"github.com/manzanit0/mcduck/api/receipts.v1/receiptsv1connect"
 	"github.com/manzanit0/mcduck/cmd/api/controllers"
+	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
+	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/receipt"
