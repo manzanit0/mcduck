@@ -4,11 +4,11 @@ managed:
   enabled: true
 
 plugins:
-  - local: protoc-gen-go
+  - remote: buf.build/protocolbuffers/go:v1.34.2
     out: gen
     opt: paths=source_relative
 
-  - local: protoc-gen-connect-go
+  - remote: buf.build/connectrpc/go:v1.17.0
     out: gen
     opt: paths=source_relative
 

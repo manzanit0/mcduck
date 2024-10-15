@@ -8,11 +8,7 @@ tasks:
     desc: install tools
     cmds:
       - go install github.com/bufbuild/buf/cmd/buf@latest
-      # These are required to generate connect clients in Go. For JS clients,
-      # we're using buf remote modules.
       - go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
-      - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-      - go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
 
   gen-proto:
     desc: generate protobuf outputs via Buf
