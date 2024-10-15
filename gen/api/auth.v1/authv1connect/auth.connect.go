@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// AuthServiceName is the fully-qualified name of the AuthService service.
-	AuthServiceName = "auth.v1.AuthService"
+	AuthServiceName = "api.auth.v1.AuthService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -34,12 +34,12 @@ const (
 // period.
 const (
 	// AuthServiceRegisterProcedure is the fully-qualified name of the AuthService's Register RPC.
-	AuthServiceRegisterProcedure = "/auth.v1.AuthService/Register"
+	AuthServiceRegisterProcedure = "/api.auth.v1.AuthService/Register"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
-	AuthServiceLoginProcedure = "/auth.v1.AuthService/Login"
+	AuthServiceLoginProcedure = "/api.auth.v1.AuthService/Login"
 	// AuthServiceConnectTelegramProcedure is the fully-qualified name of the AuthService's
 	// ConnectTelegram RPC.
-	AuthServiceConnectTelegramProcedure = "/auth.v1.AuthService/ConnectTelegram"
+	AuthServiceConnectTelegramProcedure = "/api.auth.v1.AuthService/ConnectTelegram"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -50,15 +50,15 @@ var (
 	authServiceConnectTelegramMethodDescriptor = authServiceServiceDescriptor.Methods().ByName("ConnectTelegram")
 )
 
-// AuthServiceClient is a client for the auth.v1.AuthService service.
+// AuthServiceClient is a client for the api.auth.v1.AuthService service.
 type AuthServiceClient interface {
 	Register(context.Context, *connect.Request[auth_v1.RegisterRequest]) (*connect.Response[auth_v1.RegisterResponse], error)
 	Login(context.Context, *connect.Request[auth_v1.LoginRequest]) (*connect.Response[auth_v1.LoginResponse], error)
 	ConnectTelegram(context.Context, *connect.Request[auth_v1.ConnectTelegramRequest]) (*connect.Response[auth_v1.ConnectTelegramResponse], error)
 }
 
-// NewAuthServiceClient constructs a client for the auth.v1.AuthService service. By default, it uses
-// the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// NewAuthServiceClient constructs a client for the api.auth.v1.AuthService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
 // uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
 // connect.WithGRPCWeb() options.
 //
@@ -95,22 +95,22 @@ type authServiceClient struct {
 	connectTelegram *connect.Client[auth_v1.ConnectTelegramRequest, auth_v1.ConnectTelegramResponse]
 }
 
-// Register calls auth.v1.AuthService.Register.
+// Register calls api.auth.v1.AuthService.Register.
 func (c *authServiceClient) Register(ctx context.Context, req *connect.Request[auth_v1.RegisterRequest]) (*connect.Response[auth_v1.RegisterResponse], error) {
 	return c.register.CallUnary(ctx, req)
 }
 
-// Login calls auth.v1.AuthService.Login.
+// Login calls api.auth.v1.AuthService.Login.
 func (c *authServiceClient) Login(ctx context.Context, req *connect.Request[auth_v1.LoginRequest]) (*connect.Response[auth_v1.LoginResponse], error) {
 	return c.login.CallUnary(ctx, req)
 }
 
-// ConnectTelegram calls auth.v1.AuthService.ConnectTelegram.
+// ConnectTelegram calls api.auth.v1.AuthService.ConnectTelegram.
 func (c *authServiceClient) ConnectTelegram(ctx context.Context, req *connect.Request[auth_v1.ConnectTelegramRequest]) (*connect.Response[auth_v1.ConnectTelegramResponse], error) {
 	return c.connectTelegram.CallUnary(ctx, req)
 }
 
-// AuthServiceHandler is an implementation of the auth.v1.AuthService service.
+// AuthServiceHandler is an implementation of the api.auth.v1.AuthService service.
 type AuthServiceHandler interface {
 	Register(context.Context, *connect.Request[auth_v1.RegisterRequest]) (*connect.Response[auth_v1.RegisterResponse], error)
 	Login(context.Context, *connect.Request[auth_v1.LoginRequest]) (*connect.Response[auth_v1.LoginResponse], error)
@@ -141,7 +141,7 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceConnectTelegramMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/api.auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceRegisterProcedure:
 			authServiceRegisterHandler.ServeHTTP(w, r)
@@ -159,13 +159,13 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 type UnimplementedAuthServiceHandler struct{}
 
 func (UnimplementedAuthServiceHandler) Register(context.Context, *connect.Request[auth_v1.RegisterRequest]) (*connect.Response[auth_v1.RegisterResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.Register is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.auth.v1.AuthService.Register is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[auth_v1.LoginRequest]) (*connect.Response[auth_v1.LoginResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.Login is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.auth.v1.AuthService.Login is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) ConnectTelegram(context.Context, *connect.Request[auth_v1.ConnectTelegramRequest]) (*connect.Response[auth_v1.ConnectTelegramResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.ConnectTelegram is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.auth.v1.AuthService.ConnectTelegram is not implemented"))
 }

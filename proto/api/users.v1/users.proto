@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package users.v1;
+package api.users.v1;
 
 option go_package = "github.com/manzanit0/mcduck/gen/api/users.v1;usersv1";
 

@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// UsersServiceName is the fully-qualified name of the UsersService service.
-	UsersServiceName = "users.v1.UsersService"
+	UsersServiceName = "api.users.v1.UsersService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -34,7 +34,7 @@ const (
 // period.
 const (
 	// UsersServiceGetUserProcedure is the fully-qualified name of the UsersService's GetUser RPC.
-	UsersServiceGetUserProcedure = "/users.v1.UsersService/GetUser"
+	UsersServiceGetUserProcedure = "/api.users.v1.UsersService/GetUser"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -43,15 +43,15 @@ var (
 	usersServiceGetUserMethodDescriptor = usersServiceServiceDescriptor.Methods().ByName("GetUser")
 )
 
-// UsersServiceClient is a client for the users.v1.UsersService service.
+// UsersServiceClient is a client for the api.users.v1.UsersService service.
 type UsersServiceClient interface {
 	GetUser(context.Context, *connect.Request[users_v1.GetUserRequest]) (*connect.Response[users_v1.GetUserResponse], error)
 }
 
-// NewUsersServiceClient constructs a client for the users.v1.UsersService service. By default, it
-// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
+// NewUsersServiceClient constructs a client for the api.users.v1.UsersService service. By default,
+// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
+// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
+// or connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
@@ -72,12 +72,12 @@ type usersServiceClient struct {
 	getUser *connect.Client[users_v1.GetUserRequest, users_v1.GetUserResponse]
 }
 
-// GetUser calls users.v1.UsersService.GetUser.
+// GetUser calls api.users.v1.UsersService.GetUser.
 func (c *usersServiceClient) GetUser(ctx context.Context, req *connect.Request[users_v1.GetUserRequest]) (*connect.Response[users_v1.GetUserResponse], error) {
 	return c.getUser.CallUnary(ctx, req)
 }
 
-// UsersServiceHandler is an implementation of the users.v1.UsersService service.
+// UsersServiceHandler is an implementation of the api.users.v1.UsersService service.
 type UsersServiceHandler interface {
 	GetUser(context.Context, *connect.Request[users_v1.GetUserRequest]) (*connect.Response[users_v1.GetUserResponse], error)
 }
@@ -94,7 +94,7 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(usersServiceGetUserMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/users.v1.UsersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/api.users.v1.UsersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersServiceGetUserProcedure:
 			usersServiceGetUserHandler.ServeHTTP(w, r)
@@ -108,5 +108,5 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 type UnimplementedUsersServiceHandler struct{}
 
 func (UnimplementedUsersServiceHandler) GetUser(context.Context, *connect.Request[users_v1.GetUserRequest]) (*connect.Response[users_v1.GetUserResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("users.v1.UsersService.GetUser is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.users.v1.UsersService.GetUser is not implemented"))
 }

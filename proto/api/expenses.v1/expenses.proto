@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package expenses.v1;
+package api.expenses.v1;
 
 import "google/protobuf/timestamp.proto";
 

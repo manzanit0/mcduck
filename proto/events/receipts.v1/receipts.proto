@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package receipt.v1;
+package events.receipts.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/manzanit0/mcduck/gen/events/receipt.v1;receiptv1";
+option go_package = "github.com/manzanit0/mcduck/gen/events/receipts.v1;receiptsv1";
 
 message ReceiptCreated {
   Receipt receipt = 1;

@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ReceiptsServiceName is the fully-qualified name of the ReceiptsService service.
-	ReceiptsServiceName = "receipts.v1.ReceiptsService"
+	ReceiptsServiceName = "api.receipts.v1.ReceiptsService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -35,19 +35,19 @@ const (
 const (
 	// ReceiptsServiceCreateReceiptsProcedure is the fully-qualified name of the ReceiptsService's
 	// CreateReceipts RPC.
-	ReceiptsServiceCreateReceiptsProcedure = "/receipts.v1.ReceiptsService/CreateReceipts"
+	ReceiptsServiceCreateReceiptsProcedure = "/api.receipts.v1.ReceiptsService/CreateReceipts"
 	// ReceiptsServiceUpdateReceiptProcedure is the fully-qualified name of the ReceiptsService's
 	// UpdateReceipt RPC.
-	ReceiptsServiceUpdateReceiptProcedure = "/receipts.v1.ReceiptsService/UpdateReceipt"
+	ReceiptsServiceUpdateReceiptProcedure = "/api.receipts.v1.ReceiptsService/UpdateReceipt"
 	// ReceiptsServiceDeleteReceiptProcedure is the fully-qualified name of the ReceiptsService's
 	// DeleteReceipt RPC.
-	ReceiptsServiceDeleteReceiptProcedure = "/receipts.v1.ReceiptsService/DeleteReceipt"
+	ReceiptsServiceDeleteReceiptProcedure = "/api.receipts.v1.ReceiptsService/DeleteReceipt"
 	// ReceiptsServiceListReceiptsProcedure is the fully-qualified name of the ReceiptsService's
 	// ListReceipts RPC.
-	ReceiptsServiceListReceiptsProcedure = "/receipts.v1.ReceiptsService/ListReceipts"
+	ReceiptsServiceListReceiptsProcedure = "/api.receipts.v1.ReceiptsService/ListReceipts"
 	// ReceiptsServiceGetReceiptProcedure is the fully-qualified name of the ReceiptsService's
 	// GetReceipt RPC.
-	ReceiptsServiceGetReceiptProcedure = "/receipts.v1.ReceiptsService/GetReceipt"
+	ReceiptsServiceGetReceiptProcedure = "/api.receipts.v1.ReceiptsService/GetReceipt"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -60,7 +60,7 @@ var (
 	receiptsServiceGetReceiptMethodDescriptor     = receiptsServiceServiceDescriptor.Methods().ByName("GetReceipt")
 )
 
-// ReceiptsServiceClient is a client for the receipts.v1.ReceiptsService service.
+// ReceiptsServiceClient is a client for the api.receipts.v1.ReceiptsService service.
 type ReceiptsServiceClient interface {
 	CreateReceipts(context.Context, *connect.Request[receipts_v1.CreateReceiptsRequest]) (*connect.Response[receipts_v1.CreateReceiptsResponse], error)
 	UpdateReceipt(context.Context, *connect.Request[receipts_v1.UpdateReceiptRequest]) (*connect.Response[receipts_v1.UpdateReceiptResponse], error)
@@ -69,7 +69,7 @@ type ReceiptsServiceClient interface {
 	GetReceipt(context.Context, *connect.Request[receipts_v1.GetReceiptRequest]) (*connect.Response[receipts_v1.GetReceiptResponse], error)
 }
 
-// NewReceiptsServiceClient constructs a client for the receipts.v1.ReceiptsService service. By
+// NewReceiptsServiceClient constructs a client for the api.receipts.v1.ReceiptsService service. By
 // default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
 // and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
 // connect.WithGRPC() or connect.WithGRPCWeb() options.
@@ -121,32 +121,32 @@ type receiptsServiceClient struct {
 	getReceipt     *connect.Client[receipts_v1.GetReceiptRequest, receipts_v1.GetReceiptResponse]
 }
 
-// CreateReceipts calls receipts.v1.ReceiptsService.CreateReceipts.
+// CreateReceipts calls api.receipts.v1.ReceiptsService.CreateReceipts.
 func (c *receiptsServiceClient) CreateReceipts(ctx context.Context, req *connect.Request[receipts_v1.CreateReceiptsRequest]) (*connect.Response[receipts_v1.CreateReceiptsResponse], error) {
 	return c.createReceipts.CallUnary(ctx, req)
 }
 
-// UpdateReceipt calls receipts.v1.ReceiptsService.UpdateReceipt.
+// UpdateReceipt calls api.receipts.v1.ReceiptsService.UpdateReceipt.
 func (c *receiptsServiceClient) UpdateReceipt(ctx context.Context, req *connect.Request[receipts_v1.UpdateReceiptRequest]) (*connect.Response[receipts_v1.UpdateReceiptResponse], error) {
 	return c.updateReceipt.CallUnary(ctx, req)
 }
 
-// DeleteReceipt calls receipts.v1.ReceiptsService.DeleteReceipt.
+// DeleteReceipt calls api.receipts.v1.ReceiptsService.DeleteReceipt.
 func (c *receiptsServiceClient) DeleteReceipt(ctx context.Context, req *connect.Request[receipts_v1.DeleteReceiptRequest]) (*connect.Response[receipts_v1.DeleteReceiptResponse], error) {
 	return c.deleteReceipt.CallUnary(ctx, req)
 }
 
-// ListReceipts calls receipts.v1.ReceiptsService.ListReceipts.
+// ListReceipts calls api.receipts.v1.ReceiptsService.ListReceipts.
 func (c *receiptsServiceClient) ListReceipts(ctx context.Context, req *connect.Request[receipts_v1.ListReceiptsRequest]) (*connect.Response[receipts_v1.ListReceiptsResponse], error) {
 	return c.listReceipts.CallUnary(ctx, req)
 }
 
-// GetReceipt calls receipts.v1.ReceiptsService.GetReceipt.
+// GetReceipt calls api.receipts.v1.ReceiptsService.GetReceipt.
 func (c *receiptsServiceClient) GetReceipt(ctx context.Context, req *connect.Request[receipts_v1.GetReceiptRequest]) (*connect.Response[receipts_v1.GetReceiptResponse], error) {
 	return c.getReceipt.CallUnary(ctx, req)
 }
 
-// ReceiptsServiceHandler is an implementation of the receipts.v1.ReceiptsService service.
+// ReceiptsServiceHandler is an implementation of the api.receipts.v1.ReceiptsService service.
 type ReceiptsServiceHandler interface {
 	CreateReceipts(context.Context, *connect.Request[receipts_v1.CreateReceiptsRequest]) (*connect.Response[receipts_v1.CreateReceiptsResponse], error)
 	UpdateReceipt(context.Context, *connect.Request[receipts_v1.UpdateReceiptRequest]) (*connect.Response[receipts_v1.UpdateReceiptResponse], error)
@@ -191,7 +191,7 @@ func NewReceiptsServiceHandler(svc ReceiptsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(receiptsServiceGetReceiptMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/receipts.v1.ReceiptsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/api.receipts.v1.ReceiptsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReceiptsServiceCreateReceiptsProcedure:
 			receiptsServiceCreateReceiptsHandler.ServeHTTP(w, r)
@@ -213,21 +213,21 @@ func NewReceiptsServiceHandler(svc ReceiptsServiceHandler, opts ...connect.Handl
 type UnimplementedReceiptsServiceHandler struct{}
 
 func (UnimplementedReceiptsServiceHandler) CreateReceipts(context.Context, *connect.Request[receipts_v1.CreateReceiptsRequest]) (*connect.Response[receipts_v1.CreateReceiptsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("receipts.v1.ReceiptsService.CreateReceipts is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.receipts.v1.ReceiptsService.CreateReceipts is not implemented"))
 }
 
 func (UnimplementedReceiptsServiceHandler) UpdateReceipt(context.Context, *connect.Request[receipts_v1.UpdateReceiptRequest]) (*connect.Response[receipts_v1.UpdateReceiptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("receipts.v1.ReceiptsService.UpdateReceipt is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.receipts.v1.ReceiptsService.UpdateReceipt is not implemented"))
 }
 
 func (UnimplementedReceiptsServiceHandler) DeleteReceipt(context.Context, *connect.Request[receipts_v1.DeleteReceiptRequest]) (*connect.Response[receipts_v1.DeleteReceiptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("receipts.v1.ReceiptsService.DeleteReceipt is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.receipts.v1.ReceiptsService.DeleteReceipt is not implemented"))
 }
 
 func (UnimplementedReceiptsServiceHandler) ListReceipts(context.Context, *connect.Request[receipts_v1.ListReceiptsRequest]) (*connect.Response[receipts_v1.ListReceiptsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("receipts.v1.ReceiptsService.ListReceipts is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.receipts.v1.ReceiptsService.ListReceipts is not implemented"))
 }
 
 func (UnimplementedReceiptsServiceHandler) GetReceipt(context.Context, *connect.Request[receipts_v1.GetReceiptRequest]) (*connect.Response[receipts_v1.GetReceiptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("receipts.v1.ReceiptsService.GetReceipt is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.receipts.v1.ReceiptsService.GetReceipt is not implemented"))
 }

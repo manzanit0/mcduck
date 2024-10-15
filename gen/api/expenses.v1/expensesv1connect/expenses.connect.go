@@ -22,7 +22,7 @@ const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ExpensesServiceName is the fully-qualified name of the ExpensesService service.
-	ExpensesServiceName = "expenses.v1.ExpensesService"
+	ExpensesServiceName = "api.expenses.v1.ExpensesService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -35,16 +35,16 @@ const (
 const (
 	// ExpensesServiceCreateExpenseProcedure is the fully-qualified name of the ExpensesService's
 	// CreateExpense RPC.
-	ExpensesServiceCreateExpenseProcedure = "/expenses.v1.ExpensesService/CreateExpense"
+	ExpensesServiceCreateExpenseProcedure = "/api.expenses.v1.ExpensesService/CreateExpense"
 	// ExpensesServiceUpdateExpenseProcedure is the fully-qualified name of the ExpensesService's
 	// UpdateExpense RPC.
-	ExpensesServiceUpdateExpenseProcedure = "/expenses.v1.ExpensesService/UpdateExpense"
+	ExpensesServiceUpdateExpenseProcedure = "/api.expenses.v1.ExpensesService/UpdateExpense"
 	// ExpensesServiceDeleteExpenseProcedure is the fully-qualified name of the ExpensesService's
 	// DeleteExpense RPC.
-	ExpensesServiceDeleteExpenseProcedure = "/expenses.v1.ExpensesService/DeleteExpense"
+	ExpensesServiceDeleteExpenseProcedure = "/api.expenses.v1.ExpensesService/DeleteExpense"
 	// ExpensesServiceListExpensesProcedure is the fully-qualified name of the ExpensesService's
 	// ListExpenses RPC.
-	ExpensesServiceListExpensesProcedure = "/expenses.v1.ExpensesService/ListExpenses"
+	ExpensesServiceListExpensesProcedure = "/api.expenses.v1.ExpensesService/ListExpenses"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -56,7 +56,7 @@ var (
 	expensesServiceListExpensesMethodDescriptor  = expensesServiceServiceDescriptor.Methods().ByName("ListExpenses")
 )
 
-// ExpensesServiceClient is a client for the expenses.v1.ExpensesService service.
+// ExpensesServiceClient is a client for the api.expenses.v1.ExpensesService service.
 type ExpensesServiceClient interface {
 	CreateExpense(context.Context, *connect.Request[expenses_v1.CreateExpenseRequest]) (*connect.Response[expenses_v1.CreateExpenseResponse], error)
 	UpdateExpense(context.Context, *connect.Request[expenses_v1.UpdateExpenseRequest]) (*connect.Response[expenses_v1.UpdateExpenseResponse], error)
@@ -64,7 +64,7 @@ type ExpensesServiceClient interface {
 	ListExpenses(context.Context, *connect.Request[expenses_v1.ListExpensesRequest]) (*connect.Response[expenses_v1.ListExpensesResponse], error)
 }
 
-// NewExpensesServiceClient constructs a client for the expenses.v1.ExpensesService service. By
+// NewExpensesServiceClient constructs a client for the api.expenses.v1.ExpensesService service. By
 // default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
 // and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
 // connect.WithGRPC() or connect.WithGRPCWeb() options.
@@ -109,27 +109,27 @@ type expensesServiceClient struct {
 	listExpenses  *connect.Client[expenses_v1.ListExpensesRequest, expenses_v1.ListExpensesResponse]
 }
 
-// CreateExpense calls expenses.v1.ExpensesService.CreateExpense.
+// CreateExpense calls api.expenses.v1.ExpensesService.CreateExpense.
 func (c *expensesServiceClient) CreateExpense(ctx context.Context, req *connect.Request[expenses_v1.CreateExpenseRequest]) (*connect.Response[expenses_v1.CreateExpenseResponse], error) {
 	return c.createExpense.CallUnary(ctx, req)
 }
 
-// UpdateExpense calls expenses.v1.ExpensesService.UpdateExpense.
+// UpdateExpense calls api.expenses.v1.ExpensesService.UpdateExpense.
 func (c *expensesServiceClient) UpdateExpense(ctx context.Context, req *connect.Request[expenses_v1.UpdateExpenseRequest]) (*connect.Response[expenses_v1.UpdateExpenseResponse], error) {
 	return c.updateExpense.CallUnary(ctx, req)
 }
 
-// DeleteExpense calls expenses.v1.ExpensesService.DeleteExpense.
+// DeleteExpense calls api.expenses.v1.ExpensesService.DeleteExpense.
 func (c *expensesServiceClient) DeleteExpense(ctx context.Context, req *connect.Request[expenses_v1.DeleteExpenseRequest]) (*connect.Response[expenses_v1.DeleteExpenseResponse], error) {
 	return c.deleteExpense.CallUnary(ctx, req)
 }
 
-// ListExpenses calls expenses.v1.ExpensesService.ListExpenses.
+// ListExpenses calls api.expenses.v1.ExpensesService.ListExpenses.
 func (c *expensesServiceClient) ListExpenses(ctx context.Context, req *connect.Request[expenses_v1.ListExpensesRequest]) (*connect.Response[expenses_v1.ListExpensesResponse], error) {
 	return c.listExpenses.CallUnary(ctx, req)
 }
 
-// ExpensesServiceHandler is an implementation of the expenses.v1.ExpensesService service.
+// ExpensesServiceHandler is an implementation of the api.expenses.v1.ExpensesService service.
 type ExpensesServiceHandler interface {
 	CreateExpense(context.Context, *connect.Request[expenses_v1.CreateExpenseRequest]) (*connect.Response[expenses_v1.CreateExpenseResponse], error)
 	UpdateExpense(context.Context, *connect.Request[expenses_v1.UpdateExpenseRequest]) (*connect.Response[expenses_v1.UpdateExpenseResponse], error)
@@ -167,7 +167,7 @@ func NewExpensesServiceHandler(svc ExpensesServiceHandler, opts ...connect.Handl
 		connect.WithSchema(expensesServiceListExpensesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/expenses.v1.ExpensesService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return "/api.expenses.v1.ExpensesService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ExpensesServiceCreateExpenseProcedure:
 			expensesServiceCreateExpenseHandler.ServeHTTP(w, r)
@@ -187,17 +187,17 @@ func NewExpensesServiceHandler(svc ExpensesServiceHandler, opts ...connect.Handl
 type UnimplementedExpensesServiceHandler struct{}
 
 func (UnimplementedExpensesServiceHandler) CreateExpense(context.Context, *connect.Request[expenses_v1.CreateExpenseRequest]) (*connect.Response[expenses_v1.CreateExpenseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("expenses.v1.ExpensesService.CreateExpense is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.expenses.v1.ExpensesService.CreateExpense is not implemented"))
 }
 
 func (UnimplementedExpensesServiceHandler) UpdateExpense(context.Context, *connect.Request[expenses_v1.UpdateExpenseRequest]) (*connect.Response[expenses_v1.UpdateExpenseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("expenses.v1.ExpensesService.UpdateExpense is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.expenses.v1.ExpensesService.UpdateExpense is not implemented"))
 }
 
 func (UnimplementedExpensesServiceHandler) DeleteExpense(context.Context, *connect.Request[expenses_v1.DeleteExpenseRequest]) (*connect.Response[expenses_v1.DeleteExpenseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("expenses.v1.ExpensesService.DeleteExpense is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.expenses.v1.ExpensesService.DeleteExpense is not implemented"))
 }
 
 func (UnimplementedExpensesServiceHandler) ListExpenses(context.Context, *connect.Request[expenses_v1.ListExpensesRequest]) (*connect.Response[expenses_v1.ListExpensesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("expenses.v1.ExpensesService.ListExpenses is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.expenses.v1.ExpensesService.ListExpenses is not implemented"))
 }
