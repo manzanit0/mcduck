@@ -39,6 +39,7 @@ const (
 func main() {
 	svc, err := micro.NewGinService(serviceName)
 	if err != nil {
+		// FIXME: remove panics and create a run() function that returns an error.
 		panic(err)
 	}
 
@@ -62,6 +63,9 @@ func main() {
 	textractParser := parser.NewTextractParser(config, apiKey)
 	aivisionParser := parser.NewAIVisionParser(apiKey)
 
+	// NOTE: this is curently not being used. That's ok though. It's handy to
+	// test behaviour manually since the pubsub mechanism relies on proto
+	// encoding.
 	svc.Engine.POST("/receipt", func(c *gin.Context) {
 		ctx, span := xtrace.GetSpan(c.Request.Context())
 
@@ -101,6 +105,7 @@ func main() {
 		c.JSON(http.StatusOK, receipt)
 	})
 
+	// FIXME: this is also done in the micro package. Get the abstraction right.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -124,40 +129,6 @@ func main() {
 	}
 }
 
-func parseReceipt(ctx context.Context, data []byte, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) (receipt *parser.Receipt, err error) {
-	_, span := xtrace.GetSpan(ctx)
-	span.SetAttributes(attribute.Int("file.size", len(data)))
-
-	contentType := http.DetectContentType(data)
-	span.SetAttributes(attribute.String("file.content_type", contentType))
-
-	var openAIRes *openai.Response
-
-	switch contentType {
-	case "application/pdf":
-		receipt, openAIRes, err = pdfParser.ExtractReceipt(ctx, data)
-		if err != nil {
-			return
-		}
-
-	// Default to images
-	default:
-		receipt, openAIRes, err = imageParser.ExtractReceipt(ctx, data)
-		if err != nil {
-			return
-		}
-	}
-
-	// NOTE: currently this is where I'm putting my money for checking responses
-	// and evaluating LLM perf. Not ideal, but good enough for now.
-	marshalled, _ := json.Marshal(receipt)
-	marshalledRes, _ := json.Marshal(openAIRes)
-	span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
-	slog.InfoContext(ctx, "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
-
-	return
-}
-
 func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
 	nc, err := nats.Connect(natsURL)
 	if err != nil {
@@ -170,6 +141,9 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 	}
 
 	msgCh := make(chan *nats.Msg, 8192)
+
+	// FIXME: we should actually AckTerm() the messages manually and update the
+	// receipt status to "failed to process" or something similar.
 	_, err = jss.ChanQueueSubscribe("events.receipts.v1.ReceiptCreated", serviceName, msgCh, nats.ManualAck(), nats.MaxDeliver(5))
 	if err != nil {
 		return fmt.Errorf("subscribe queue: %w", err)
@@ -209,6 +183,7 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 }
 
 func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
+	// FIXME: this trace_id/span_id context propagation isn't working.
 	ctx := xtrace.HydrateContext(context.Background(), msg.Header.Get("trace_id"), msg.Header.Get("span_id"))
 	ctx, span := xtrace.StartSpan(ctx, "Consume ReceiptCreated event")
 	defer span.End()
@@ -275,4 +250,38 @@ func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser,
 	}
 
 	return nil
+}
+
+func parseReceipt(ctx context.Context, data []byte, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) (receipt *parser.Receipt, err error) {
+	_, span := xtrace.GetSpan(ctx)
+	span.SetAttributes(attribute.Int("file.size", len(data)))
+
+	contentType := http.DetectContentType(data)
+	span.SetAttributes(attribute.String("file.content_type", contentType))
+
+	var openAIRes *openai.Response
+
+	switch contentType {
+	case "application/pdf":
+		receipt, openAIRes, err = pdfParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+
+	// Default to images
+	default:
+		receipt, openAIRes, err = imageParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+	}
+
+	// NOTE: currently this is where I'm putting my money for checking responses
+	// and evaluating LLM perf. Not ideal, but good enough for now.
+	marshalled, _ := json.Marshal(receipt)
+	marshalledRes, _ := json.Marshal(openAIRes)
+	span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
+	slog.InfoContext(ctx, "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
+
+	return
 }
