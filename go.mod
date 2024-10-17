@@ -76,6 +76,7 @@ require (
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/otelconnect v0.7.1
 	github.com/XSAM/otelsql v0.33.0
+	github.com/alitto/pond v1.9.2
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.3 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.24 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.9 // indirect
