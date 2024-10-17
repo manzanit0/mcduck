@@ -217,7 +217,7 @@ services:
       - "16686:16686" # Web UI
       - "4317:4317" # accept OTLP over GRPC
     environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - COLLECTOR_OTLP_ENABLED=true
     networks:
       - mcduck
