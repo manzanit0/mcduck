@@ -17,9 +17,9 @@ import (
 	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
-	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/micro"
+	"github.com/manzanit0/mcduck/pkg/pubsub"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"github.com/manzanit0/mcduck/pkg/xhttp"
 	"github.com/manzanit0/mcduck/pkg/xlog"
@@ -54,8 +54,11 @@ func run() error {
 	tgramToken := micro.MustGetEnv("TELEGRAM_BOT_TOKEN")
 	tgramClient := tgram.NewClient(xhttp.NewClient(), tgramToken)
 
-	parserHost := micro.MustGetEnv("PARSER_HOST")
-	parserClient := client.NewParserClient(parserHost)
+	natsURL := micro.MustGetEnv("NATS_URL")
+	js, _, err := pubsub.NewStream(context.TODO(), natsURL, pubsub.DefaultStreamName, "events.receipts.v1.ReceiptCreated")
+	if err != nil {
+		return err
+	}
 
 	otelInterceptor, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutMetrics())
 	if err != nil {
@@ -77,7 +80,7 @@ func run() error {
 	))
 
 	mux.Handle(receiptsv1connect.NewReceiptsServiceHandler(
-		servers.NewReceiptsServer(dbx, parserClient, tgramClient),
+		servers.NewReceiptsServer(dbx, tgramClient, js),
 		connect.WithInterceptors(otelInterceptor, authInterceptor, traceEnhancer),
 	))
 

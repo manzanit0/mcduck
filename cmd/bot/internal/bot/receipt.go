@@ -12,7 +12,6 @@ import (
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	usersv1 "github.com/manzanit0/mcduck/gen/api/users.v1"
 	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
-	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
@@ -21,7 +20,7 @@ import (
 )
 
 const (
-	defaultCurrency = "€"
+	defaultCurrency = "€" //nolint:unused
 )
 
 func GetDocument(ctx context.Context, tgramClient tgram.Client, fileID string) ([]byte, error) {
@@ -123,12 +122,10 @@ func ParseReceipt(ctx context.Context, tgramClient tgram.Client, usersClient use
 		return tgram.NewHTMLResponse(fmt.Sprintf("unable to parser receipt: %s", err.Error()), r.GetFromID())
 	}
 
-	return tgram.NewMarkdownResponse(newBreakdownTgramMessage(map[string]float64{
-		res.Msg.Receipts[0].Expenses[0].Description: float64(expense.ConvertToDollar(int32(res.Msg.Receipts[0].Expenses[0].Amount))),
-	}), r.GetFromID())
+	return tgram.NewHTMLResponse(fmt.Sprintf("Receipt submitted for processing. It's ID is %d.", res.Msg.Receipts[0].GetId()), r.GetFromID())
 }
 
-func newBreakdownTgramMessage(amounts map[string]float64) string {
+func newBreakdownTgramMessage(amounts map[string]float64) string { //nolint:unused
 	b := bytes.NewBuffer([]byte{})
 	table := tablewriter.NewWriter(b)
 

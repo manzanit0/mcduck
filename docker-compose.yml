@@ -1,10 +1,26 @@
+x-postgres-connection: &postgres-connection
+  PGUSER: root
+  PGPASSWORD: password
+  PGDATABASE: mcduck_db
+  PGHOST: postgresql
+  PGPORT: 5432
+
 services:
   nats:
-    image: nats
+    image: nats:2.10
+    container_name: nats
     ports:
       - "8222:8222"
       - "4222:4222"
-    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 "
+    command: 
+      - "--name=my-nats"
+      # TODO: we can look into the cluster stuff when deploying high availability
+      # - "--cluster_name=my-nats-cluster"
+      # - "--cluster=nats://0.0.0.0:6222"
+      # - "--routes=nats://0.0.0.0:6222"
+      - "--http_port=8222"
+      - "--js"
+      - "--sd=/data"
     networks:
       - mcduck
 
@@ -16,33 +32,35 @@ services:
     command: go run ./cmd/api
     develop:
       watch:
+        - action: rebuild
+          path: go.mod
+
         - action: sync+restart
-          path: ./
-          ignore:
-            - .github/
-            - cmd/bot/
-            - cmd/dots/
-            - cmd/parser/
-            - migrations/
-            - railway/
-            - scripts/
-            - spidey/
+          path: ./cmd/api
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./gen
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./internal
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./pkg
           target: /usr/src/app
     ports:
       - 8080:8080
     environment:
-      - PGUSER=root
-      - PGPASSWORD=password
-      - PGDATABASE=mcduck_db
-      - PGHOST=postgresql
-      - PGPORT=5432
-      - PARSER_HOST=http://parser:8080
-      - PUBLIC_DOTS_HOST=http://localhost:8083
-      - PRIVATE_DOTS_HOST=http://dots:8080
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
-      - OTEL_EXPORTER_OTLP_INSECURE=true
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=mcduck,service.version=latest,deployment.environment=local
+      <<: *postgres-connection
+      PARSER_HOST: http://parser:8080
+      PUBLIC_DOTS_HOST: http://localhost:8083
+      PRIVATE_DOTS_HOST: http://dots:8080
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_RESOURCE_ATTRIBUTES: service.name=mcduck,service.version=latest,deployment.environment=local
     networks:
       - mcduck
     depends_on:
@@ -51,22 +69,20 @@ services:
 
   dots:
     image: cosmtrek/air
+    container_name: dots
     command: -c .air.dots.toml
     working_dir: /app
     ports:
       - 8083:8080
     environment:
-      - PGUSER=root
-      - PGPASSWORD=password
-      - PGDATABASE=mcduck_db
-      - PGHOST=postgresql
-      - PGPORT=5432
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - PARSER_HOST=http://parser:8080
-      - ALLOWED_ORIGINS=*/*
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
-      - OTEL_EXPORTER_OTLP_INSECURE=true
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=dots,service.version=latest,deployment.environment=local
+      <<: *postgres-connection
+      NATS_URL: nats://nats:4222
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      PARSER_HOST: http://parser:8080
+      ALLOWED_ORIGINS: "*/*"
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_RESOURCE_ATTRIBUTES: service.name=dots,service.version=latest,deployment.environment=local
     volumes:
       - ./:/app
     networks:
@@ -82,17 +98,23 @@ services:
     command: go run ./cmd/bot
     develop:
       watch:
+        - action: rebuild
+          path: go.mod
+
         - action: sync+restart
-          path: ./
-          ignore:
-            - .github/
-            - cmd/api/
-            - cmd/dots/
-            - cmd/parser/
-            - migrations/
-            - railway/
-            - scripts/
-            - spidey/
+          path: ./cmd/bot
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./gen
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./internal
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./pkg
           target: /usr/src/app
     ports:
       - 8081:8080
@@ -117,27 +139,35 @@ services:
     command: go run ./cmd/parser
     develop:
       watch:
+        - action: rebuild
+          path: go.mod
+
         - action: sync+restart
-          path: ./
-          ignore:
-            - .github/
-            - cmd/api/
-            - cmd/dots/
-            - cmd/bot/
-            - migrations/
-            - railway/
-            - scripts/
-            - spidey/
+          path: ./cmd/parser
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./gen
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./internal
+          target: /usr/src/app
+
+        - action: sync+restart
+          path: ./pkg
           target: /usr/src/app
     ports:
       - 8082:8080
     environment:
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
-      - OTEL_EXPORTER_OTLP_INSECURE=true
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=parser,service.version=latest,deployment.environment=local
+      <<: *postgres-connection
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_RESOURCE_ATTRIBUTES: service.name=parser,service.version=latest,deployment.environment=local
+      NATS_URL: nats://nats:4222
     networks:
       - mcduck
     depends_on:

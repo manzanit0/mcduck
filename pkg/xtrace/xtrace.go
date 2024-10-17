@@ -62,6 +62,24 @@ func StartSpan(ctx context.Context, spanName string, opts ...trace.SpanStartOpti
 	return Tracer().Start(ctx, spanName, opts...)
 }
 
+func HydrateContext(ctx context.Context, traceID string, spanID string) context.Context {
+	if traceID == "" || spanID == "" {
+		return ctx
+	}
+
+	traceIDTyped := trace.TraceID([]byte(traceID))
+	spanIDTyped := trace.SpanID([]byte(spanID))
+
+	return trace.ContextWithRemoteSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDTyped,
+			SpanID:     spanIDTyped,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
+}
+
 func GetSpan(ctx context.Context) (context.Context, trace.Span) {
 	span := trace.SpanFromContext(ctx)
 	return ctx, span

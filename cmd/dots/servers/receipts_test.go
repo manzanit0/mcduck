@@ -8,11 +8,11 @@ import (
 
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
-	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/internal/pgtest"
 	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/internal/users"
 	"github.com/manzanit0/mcduck/pkg/auth"
+	"github.com/manzanit0/mcduck/pkg/pubsub"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -20,8 +20,8 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	natstc "github.com/testcontainers/testcontainers-go/modules/nats"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
@@ -37,8 +37,20 @@ func TestCreateReceipt(t *testing.T) {
 	err = dbContainer.Snapshot(ctx, postgres.WithSnapshotName("create_receipt"))
 	require.NoError(t, err)
 
+	natsContainer, err := natstc.Run(ctx, "nats:2.10")
+	require.NoError(t, err)
+
+	natsConnectionString, err := natsContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	js, _, err := pubsub.NewStream(ctx, natsConnectionString, "mcduck", "events.receipts.v1.ReceiptCreated")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
 		err = dbContainer.Terminate(ctx)
+		require.NoError(t, err)
+
+		err = natsContainer.Terminate(ctx)
 		require.NoError(t, err)
 	})
 
@@ -67,22 +79,11 @@ func TestCreateReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		parserClient := client.NewMockParserClient(t)
 		tgramClient := tgram.NewMockClient(t)
-		s := servers.NewReceiptsServer(db, parserClient, tgramClient)
+		s := servers.NewReceiptsServer(db, tgramClient, js)
 
 		userEmail := "user@email.com"
 		receiptBytes := []byte("foo")
-		parserClient.EXPECT().
-			ParseReceipt(mock.Anything, userEmail, receiptBytes).
-			Return(&client.ParseReceiptResponse{
-				Amount:       5.5,
-				Currency:     "EUR",
-				Description:  "some description",
-				Vendor:       "some vendor",
-				PurchaseDate: "02/01/2006",
-			}, nil).
-			Once()
 
 		_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 		require.NoError(t, err)
@@ -100,17 +101,7 @@ func TestCreateReceipt(t *testing.T) {
 
 		receipt := receipts[0]
 		require.NoError(t, err)
-		assert.Equal(t, receipt.Vendor, "some vendor")
 		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW)
-		assert.Equal(t, receipt.Date.AsTime().Format("02/01/2006"), "02/01/2006")
-
-		expenses := receipt.Expenses
-		require.Len(t, expenses, 1)
-		assert.EqualValues(t, expenses[0].Amount, 550)
-		assert.Equal(t, expenses[0].Category, "Receipt Upload")
-		assert.Equal(t, expenses[0].Subcategory, "")
-		assert.Equal(t, expenses[0].Description, "some description")
-		assert.Equal(t, expenses[0].Date.AsTime().Format("02/01/2006"), receipt.Date.AsTime().Format("02/01/2006"))
 	})
 
 	t.Run("invalid dates are transformed to 'now'", func(t *testing.T) {
@@ -125,22 +116,11 @@ func TestCreateReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		parserClient := client.NewMockParserClient(t)
 		tgramClient := tgram.NewMockClient(t)
-		s := servers.NewReceiptsServer(db, parserClient, tgramClient)
+		s := servers.NewReceiptsServer(db, tgramClient, js)
 
 		userEmail := "user@email.com"
 		receiptBytes := []byte("foo")
-		parserClient.EXPECT().
-			ParseReceipt(mock.Anything, userEmail, receiptBytes).
-			Return(&client.ParseReceiptResponse{
-				Amount:       5.5,
-				Currency:     "EUR",
-				Description:  "some description",
-				Vendor:       "some vendor",
-				PurchaseDate: "some-gibberish", // invalid date
-			}, nil).
-			Once()
 
 		_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 		require.NoError(t, err)
@@ -158,18 +138,7 @@ func TestCreateReceipt(t *testing.T) {
 
 		receipt := receipts[0]
 		require.NoError(t, err)
-		assert.Equal(t, receipt.Vendor, "some vendor")
 		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW)
-		assert.Equal(t, receipt.Date.AsTime().Format("02/01/2006"), time.Now().Format("02/01/2006"))
-
-		expenses := receipt.Expenses
-		require.NoError(t, err)
-		require.Len(t, expenses, 1)
-		assert.EqualValues(t, expenses[0].Amount, 550)
-		assert.Equal(t, expenses[0].Category, "Receipt Upload")
-		assert.Equal(t, expenses[0].Subcategory, "")
-		assert.Equal(t, expenses[0].Description, "some description")
-		assert.Equal(t, expenses[0].Date.AsTime().Format("02/01/2006"), time.Now().Format("02/01/2006"))
 	})
 
 	t.Run("empty images are rejected", func(t *testing.T) {
@@ -184,22 +153,11 @@ func TestCreateReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		parserClient := client.NewMockParserClient(t)
 		tgramClient := tgram.NewMockClient(t)
-		s := servers.NewReceiptsServer(db, parserClient, tgramClient)
+		s := servers.NewReceiptsServer(db, tgramClient, js)
 
 		userEmail := "user@email.com"
 		receiptBytes := []byte("") // empty image
-		parserClient.EXPECT().
-			ParseReceipt(mock.Anything, userEmail, receiptBytes).
-			Return(&client.ParseReceiptResponse{
-				Amount:       5.5,
-				Currency:     "EUR",
-				Description:  "some description",
-				Vendor:       "some vendor",
-				PurchaseDate: "02/01/2006",
-			}, nil).
-			Once()
 
 		_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 		require.NoError(t, err)
@@ -225,22 +183,11 @@ func TestCreateReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		parserClient := client.NewMockParserClient(t)
 		tgramClient := tgram.NewMockClient(t)
-		s := servers.NewReceiptsServer(db, parserClient, tgramClient)
+		s := servers.NewReceiptsServer(db, tgramClient, js)
 
 		userEmail := "user@email.com"
 		receiptBytes := []byte("foo")
-		parserClient.EXPECT().
-			ParseReceipt(mock.Anything, userEmail, receiptBytes).
-			Return(&client.ParseReceiptResponse{
-				Amount:       5.5,
-				Currency:     "EUR",
-				Description:  "some description",
-				Vendor:       "some vendor",
-				PurchaseDate: "02/01/2006",
-			}, nil).
-			Once()
 
 		// Let's close the connection to force a DB error.
 		err = db.Close()
@@ -293,8 +240,20 @@ func TestUpdateReceipt(t *testing.T) {
 	err = dbContainer.Snapshot(ctx, postgres.WithSnapshotName("create_receipt"))
 	require.NoError(t, err)
 
+	natsContainer, err := natstc.Run(ctx, "nats:2.10")
+	require.NoError(t, err)
+
+	natsConnectionString, err := natsContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	js, _, err := pubsub.NewStream(ctx, natsConnectionString, "mcduck", "events.receipts.v1.ReceiptCreated")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
 		err = dbContainer.Terminate(ctx)
+		require.NoError(t, err)
+
+		err = natsContainer.Terminate(ctx)
 		require.NoError(t, err)
 	})
 
@@ -313,7 +272,7 @@ func TestUpdateReceipt(t *testing.T) {
 		updateStr := "updated"
 		updateBool := true
 		updateDate := timestamppb.New(time.Date(1993, 2, 24, 0, 0, 0, 0, time.UTC))
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.UpdateReceipt(ctx, &connect.Request[receiptsv1.UpdateReceiptRequest]{
 			Msg: &receiptsv1.UpdateReceiptRequest{
 				Id:            uint64(existingReceipt.ID),
@@ -346,7 +305,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 
 		updateValue := "updated"
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.UpdateReceipt(ctx, &connect.Request[receiptsv1.UpdateReceiptRequest]{
 			Msg: &receiptsv1.UpdateReceiptRequest{
 				Id:     uint64(existingReceipt.ID),
@@ -377,7 +336,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 
 		updateValue := true
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.UpdateReceipt(ctx, &connect.Request[receiptsv1.UpdateReceiptRequest]{
 			Msg: &receiptsv1.UpdateReceiptRequest{
 				Id:            uint64(existingReceipt.ID),
@@ -408,7 +367,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 
 		updateValue := timestamppb.New(time.Date(1993, 2, 24, 0, 0, 0, 0, time.UTC))
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.UpdateReceipt(ctx, &connect.Request[receiptsv1.UpdateReceiptRequest]{
 			Msg: &receiptsv1.UpdateReceiptRequest{
 				Id:   uint64(existingReceipt.ID),
@@ -438,7 +397,7 @@ func TestUpdateReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.UpdateReceipt(ctx, &connect.Request[receiptsv1.UpdateReceiptRequest]{
 			Msg: &receiptsv1.UpdateReceiptRequest{
 				Id: 123123,
@@ -482,8 +441,20 @@ func TestDeleteReceipt(t *testing.T) {
 	err = dbContainer.Snapshot(ctx, postgres.WithSnapshotName("delete_receipt"))
 	require.NoError(t, err)
 
+	natsContainer, err := natstc.Run(ctx, "nats:2.10")
+	require.NoError(t, err)
+
+	natsConnectionString, err := natsContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	js, _, err := pubsub.NewStream(ctx, natsConnectionString, "mcduck", "events.receipts.v1.ReceiptCreated")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
 		err = dbContainer.Terminate(ctx)
+		require.NoError(t, err)
+
+		err = natsContainer.Terminate(ctx)
 		require.NoError(t, err)
 	})
 
@@ -499,7 +470,7 @@ func TestDeleteReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.DeleteReceipt(ctx, &connect.Request[receiptsv1.DeleteReceiptRequest]{
 			Msg: &receiptsv1.DeleteReceiptRequest{
 				Id: uint64(existingreceipt.ID),
@@ -525,7 +496,7 @@ func TestDeleteReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		_, err = s.DeleteReceipt(ctx, &connect.Request[receiptsv1.DeleteReceiptRequest]{
 			Msg: &receiptsv1.DeleteReceiptRequest{
 				Id: 9999999,
@@ -573,8 +544,20 @@ func TestGetReceipt(t *testing.T) {
 	err = dbContainer.Snapshot(ctx, postgres.WithSnapshotName("delete_receipt"))
 	require.NoError(t, err)
 
+	natsContainer, err := natstc.Run(ctx, "nats:2.10")
+	require.NoError(t, err)
+
+	natsConnectionString, err := natsContainer.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	js, _, err := pubsub.NewStream(ctx, natsConnectionString, "mcduck", "events.receipts.v1.ReceiptCreated")
+	require.NoError(t, err)
+
 	t.Cleanup(func() {
 		err = dbContainer.Terminate(ctx)
+		require.NoError(t, err)
+
+		err = natsContainer.Terminate(ctx)
 		require.NoError(t, err)
 	})
 
@@ -590,7 +573,7 @@ func TestGetReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		res, err := s.GetReceipt(ctx, &connect.Request[receiptsv1.GetReceiptRequest]{
 			Msg: &receiptsv1.GetReceiptRequest{
 				Id: uint64(existingreceipt.ID),
@@ -622,7 +605,7 @@ func TestGetReceipt(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		s := servers.NewReceiptsServer(db, nil, nil)
+		s := servers.NewReceiptsServer(db, nil, js)
 		res, err := s.GetReceipt(ctx, &connect.Request[receiptsv1.GetReceiptRequest]{
 			Msg: &receiptsv1.GetReceiptRequest{
 				Id: 9999999,

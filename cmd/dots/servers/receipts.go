@@ -13,12 +13,14 @@ import (
 	"github.com/jmoiron/sqlx"
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
-	"github.com/manzanit0/mcduck/internal/client"
+	receiptsevv1 "github.com/manzanit0/mcduck/gen/events/receipts.v1"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/pkg/auth"
+	"github.com/manzanit0/mcduck/pkg/pubsub"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
+	"github.com/nats-io/nats.go/jetstream"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -28,19 +30,19 @@ import (
 
 type receiptsServer struct {
 	Telegram tgram.Client
-	Parser   client.ParserClient
 	Receipts *receipt.Repository
 	Expenses *expense.Repository
+	js       jetstream.JetStream
 }
 
 var _ receiptsv1connect.ReceiptsServiceClient = &receiptsServer{}
 
-func NewReceiptsServer(db *sqlx.DB, p client.ParserClient, t tgram.Client) receiptsv1connect.ReceiptsServiceClient {
+func NewReceiptsServer(db *sqlx.DB, t tgram.Client, js jetstream.JetStream) receiptsv1connect.ReceiptsServiceClient {
 	return &receiptsServer{
 		Telegram: t,
-		Parser:   p,
 		Receipts: receipt.NewRepository(db),
 		Expenses: expense.NewRepository(db),
+		js:       js,
 	}
 }
 
@@ -49,12 +51,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 
 	email := auth.MustGetUserEmailConnect(ctx)
 
-	type receiptWithExpenses struct {
-		receipt  *receipt.Receipt
-		expenses []expense.Expense
-	}
-
-	ch := make(chan receiptWithExpenses, len(req.Msg.ReceiptFiles))
+	ch := make(chan *receipt.Receipt, len(req.Msg.ReceiptFiles))
 
 	g, ctx := errgroup.WithContext(ctx)
 	for i, file := range req.Msg.ReceiptFiles {
@@ -62,41 +59,43 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 			ctx, span := xtrace.StartSpan(ctx, "Process Receipt")
 			defer span.End()
 
-			parsed, err := s.Parser.ParseReceipt(ctx, email, file)
-			if err != nil {
-				slog.ErrorContext(ctx, "failed to parse receipt through parser service", "error", err.Error(), "index", i)
-				span.SetStatus(codes.Error, err.Error())
-				return fmt.Errorf("parse receipt: %w", err)
-			}
-
-			parsedTime, err := time.Parse("02/01/2006", parsed.PurchaseDate)
-			if err != nil {
-				slog.Info("failed to parse receipt date. Defaulting to 'now' ", "error", err.Error(), "index", i)
-				parsedTime = time.Now()
-			}
-
+			// TODO: we should do a batch insert to make it an all or nothing.
 			created, err := s.Receipts.CreateReceipt(ctx, receipt.CreateReceiptRequest{
-				Amount:      parsed.Amount,
-				Description: parsed.Description,
-				Vendor:      parsed.Vendor,
-				Image:       file,
-				Date:        parsedTime,
-				Email:       email,
+				Image: file,
+				Email: email,
 			})
 			if err != nil {
-				slog.ErrorContext(ctx, "failed to insert receipt", "error", err.Error(), "index", i)
+				slog.ErrorContext(ctx, "failed to insert receipt", "error", err.Error(), "index", i, "email", email)
 				span.SetStatus(codes.Error, err.Error())
 				return fmt.Errorf("create receipt: %w", err)
 			}
 
-			expenses, err := s.Expenses.ListExpensesForReceipt(ctx, uint64(created.ID))
+			data, topic, err := pubsub.MarshalProto(&receiptsevv1.ReceiptCreated{
+				Receipt: &receiptsevv1.Receipt{
+					Id:   uint64(created.ID),
+					File: file,
+				},
+				UserEmail: email,
+			})
 			if err != nil {
-				slog.ErrorContext(ctx, "failed to list expenses for receipt", "error", err.Error())
+				slog.ErrorContext(ctx, "failed to marshal receipt to event bytes", "error", err.Error(), "index", i)
 				span.SetStatus(codes.Error, err.Error())
-				return fmt.Errorf("list expenses: %w", err)
+				return fmt.Errorf("marshal receipt: %w", err)
 			}
 
-			ch <- receiptWithExpenses{receipt: created, expenses: expenses}
+			// TODO: this must be done within the Database transaction
+			_, publishSpan := xtrace.StartSpan(ctx, fmt.Sprintf("Send %s message", topic))
+			slog.InfoContext(ctx, "emitting event", "topic", topic)
+			_, err = s.js.Publish(ctx, topic, data)
+			if err != nil {
+				slog.ErrorContext(ctx, "failed to send ReceiptCreated event", "error", err.Error(), "index", i)
+				publishSpan.SetStatus(codes.Error, err.Error())
+				publishSpan.End()
+				return fmt.Errorf("send event: %w", err)
+			}
+			publishSpan.End()
+
+			ch <- created
 
 			return nil
 		})
@@ -113,12 +112,9 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 	res := connect.NewResponse(&receiptsv1.CreateReceiptsResponse{})
 
 	for e := range ch {
-		res.Msg.Receipts = append(res.Msg.Receipts, &receiptsv1.Receipt{
-			Id:       uint64(e.receipt.ID),
-			Status:   mapReceiptStatus(e.receipt),
-			Vendor:   e.receipt.Vendor,
-			Date:     timestamppb.New(e.receipt.Date),
-			Expenses: mapExpenses(e.expenses),
+		res.Msg.Receipts = append(res.Msg.Receipts, &receiptsv1.CreatedReceipt{
+			Id:     uint64(e.ID),
+			Status: mapReceiptStatus(e),
 		})
 	}
 

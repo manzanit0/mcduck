@@ -8,13 +8,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/gin-gonic/gin"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	receiptsevv1 "github.com/manzanit0/mcduck/gen/events/receipts.v1"
+	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/parser"
+	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/pkg/micro"
 	"github.com/manzanit0/mcduck/pkg/openai"
+	"github.com/manzanit0/mcduck/pkg/pubsub"
+	"github.com/manzanit0/mcduck/pkg/xsql"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
+	"github.com/nats-io/nats.go/jetstream"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -29,6 +37,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	dbx, err := xsql.OpenFromEnv()
+	if err != nil {
+		panic(err)
+	}
+	defer xsql.Close(dbx)
 
 	apiKey := micro.MustGetEnv("OPENAI_API_KEY")
 
@@ -72,49 +86,146 @@ func main() {
 			return
 		}
 
-		span.SetAttributes(attribute.Int("file.size", len(data)))
-
-		contentType := http.DetectContentType(data)
-		span.SetAttributes(attribute.String("file.content_type", contentType))
-
-		var receipt *parser.Receipt
-		var openAIRes *openai.Response
-
-		switch contentType {
-		case "application/pdf":
-			receipt, openAIRes, err = textractParser.ExtractReceipt(ctx, data)
-			if err != nil {
-				marshalledRes, _ := json.Marshal(openAIRes)
-				span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
-				span.SetStatus(codes.Error, err.Error())
-				slog.ErrorContext(c.Request.Context(), "failed to extract receipt", "error", err.Error(), "open_ai_response", marshalledRes)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable extract data from receipt: %s", err.Error())})
-				return
-			}
-
-		// Default to images
-		default:
-			receipt, openAIRes, err = aivisionParser.ExtractReceipt(ctx, data)
-			if err != nil {
-				marshalledRes, _ := json.Marshal(openAIRes)
-				span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
-				span.SetStatus(codes.Error, err.Error())
-				slog.ErrorContext(c.Request.Context(), "chatGPT response", "error", err.Error(), "open_ai_response", marshalledRes)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable extract data from receipt: %s", err.Error())})
-				return
-			}
+		receipt, err := parseReceipt(ctx, data, textractParser, aivisionParser)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			slog.ErrorContext(c.Request.Context(), "failed to extract receipt", "error", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable extract data from receipt: %s", err.Error())})
+			return
 		}
-
-		marshalled, _ := json.Marshal(receipt)
-		marshalledRes, _ := json.Marshal(openAIRes)
-		span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
-		slog.InfoContext(c.Request.Context(), "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
 
 		c.JSON(http.StatusOK, receipt)
 	})
 
-	if err := svc.Run(); err != nil {
-		slog.Error("run ended with error", "error", err.Error())
+	natsURL := micro.MustGetEnv("NATS_URL")
+	consumer, err := pubsub.NewConsumer(context.Background(), natsURL, pubsub.DefaultStreamName, serviceName, "events.receipts.v1.ReceiptCreated")
+	if err != nil {
+		slog.Error("connect to nats", "error", err.Error())
 		os.Exit(1)
 	}
+
+	_, err = consumer.Consume(func(msg jetstream.Msg) {
+		ctx := xtrace.HydrateContext(context.Background(), msg.Headers().Get("trace_id"), msg.Headers().Get("span_id"))
+		ctx, span := xtrace.StartSpan(ctx, "Consume ReceiptCreated event")
+		defer span.End()
+
+		slog.InfoContext(ctx, "Received events.receipts.v1.ReceiptCreated")
+
+		ev, err := pubsub.UnmarshalProto(msg.Data(), &receiptsevv1.ReceiptCreated{})
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			slog.ErrorContext(ctx, "failed to unmarshal event", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+
+		data := ev.Receipt.File
+		parsedReceipt, err := parseReceipt(ctx, data, textractParser, aivisionParser)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			slog.ErrorContext(ctx, "parser receipt error", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+
+		parsedTime, err := time.Parse("02/01/2006", parsedReceipt.PurchaseDate)
+		if err != nil {
+			slog.Info("failed to parse receipt date. Defaulting to 'now' ", "error", err.Error())
+			parsedTime = time.Now()
+		}
+
+		txn, err := dbx.BeginTxx(ctx, nil)
+		if err != nil {
+			slog.ErrorContext(ctx, "begin sql transaction", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+		defer xsql.TxClose(txn)
+
+		receiptRepo := receipt.NewRepository(dbx)
+		err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, receipt.UpdateReceiptRequest{
+			ID:     int64(ev.Receipt.Id),
+			Vendor: &parsedReceipt.Vendor,
+			Date:   &parsedTime,
+		})
+		if err != nil {
+			slog.ErrorContext(ctx, "update receipt", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+
+		err = expense.CreateExpenses(ctx, txn, expense.ExpensesBatch{
+			Records: []expense.Expense{
+				{
+					Date:        parsedTime,
+					Amount:      float32(parsedReceipt.Amount),
+					Category:    "Receipt Upload",
+					Subcategory: "",
+					UserEmail:   ev.UserEmail,
+					ReceiptID:   ev.Receipt.Id,
+					Description: "This expense has be autogenerated by the system",
+				},
+			},
+			UserEmail: ev.UserEmail,
+		})
+		if err != nil {
+			slog.ErrorContext(ctx, "create expenses", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+
+		if err = txn.Commit(); err != nil {
+			slog.ErrorContext(ctx, "committing txn", "error", err.Error())
+			_ = msg.Nak()
+			return
+		}
+
+		if err = msg.Ack(); err != nil {
+			slog.ErrorContext(ctx, "error acknowledging message", "error", err.Error())
+			_ = msg.Nak()
+		}
+	})
+	if err != nil {
+		slog.Error("consumer ended with error", "error", err.Error())
+		os.Exit(1)
+	}
+
+	if err := svc.Run(); err != nil {
+		slog.Error("api ended with error", "error", err.Error())
+		os.Exit(1)
+	}
+}
+
+func parseReceipt(ctx context.Context, data []byte, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) (receipt *parser.Receipt, err error) {
+	_, span := xtrace.GetSpan(ctx)
+	span.SetAttributes(attribute.Int("file.size", len(data)))
+
+	contentType := http.DetectContentType(data)
+	span.SetAttributes(attribute.String("file.content_type", contentType))
+
+	var openAIRes *openai.Response
+
+	switch contentType {
+	case "application/pdf":
+		receipt, openAIRes, err = pdfParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+
+	// Default to images
+	default:
+		receipt, openAIRes, err = imageParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+	}
+
+	// NOTE: currently this is where I'm putting my money for checking responses
+	// and evaluating LLM perf. Not ideal, but good enough for now.
+	marshalled, _ := json.Marshal(receipt)
+	marshalledRes, _ := json.Marshal(openAIRes)
+	span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
+	slog.InfoContext(ctx, "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
+
+	return
 }

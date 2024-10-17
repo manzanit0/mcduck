@@ -205,6 +205,62 @@ func (r *Repository) UpdateReceipt(ctx context.Context, e UpdateReceiptRequest) 
 	return nil
 }
 
+func (r *Repository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e UpdateReceiptRequest) error {
+	ctx, span := xtrace.StartSpan(ctx, "Update Receipt")
+	defer span.End()
+
+	var shouldUpdate bool
+	var shouldUpdateExpenseDates bool
+
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	builder := psql.Update("receipts").Where(sq.Eq{"id": e.ID})
+
+	if e.Vendor != nil {
+		builder = builder.Set("vendor", *e.Vendor)
+		shouldUpdate = true
+	}
+
+	if e.PendingReview != nil {
+		builder = builder.Set("pending_review", *e.PendingReview)
+		shouldUpdate = true
+	}
+
+	if e.Date != nil {
+		builder = builder.Set("receipt_date", *e.Date)
+		shouldUpdate = true
+		shouldUpdateExpenseDates = true
+	}
+
+	if !shouldUpdate {
+		return nil
+	}
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return fmt.Errorf("compile receipts query: %w", err)
+	}
+
+	_, err = txn.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
+	if shouldUpdateExpenseDates {
+		query, args, err = psql.Update("expenses").Where(sq.Eq{"receipt_id": e.ID}).Set("expense_date", *e.Date).ToSql()
+		if err != nil {
+			return fmt.Errorf("compile expenses query: %w", err)
+		}
+
+		_, err = txn.ExecContext(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("execute expenses query: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (r *Repository) ListReceipts(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts")
 	defer span.End()

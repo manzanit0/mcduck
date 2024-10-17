@@ -19,7 +19,7 @@ message CreateReceiptsRequest {
 }
 
 message CreateReceiptsResponse {
-  repeated Receipt receipts = 1;
+  repeated CreatedReceipt receipts = 1;
 }
 
 message UpdateReceiptRequest {
@@ -53,6 +53,11 @@ enum ReceiptStatus {
   RECEIPT_STATUS_UNSPECIFIED = 0;
   RECEIPT_STATUS_PENDING_REVIEW = 1;
   RECEIPT_STATUS_REVIEWED = 2;
+}
+
+message CreatedReceipt {
+  uint64 id = 1;
+  ReceiptStatus status = 2;
 }
 
 message Receipt {

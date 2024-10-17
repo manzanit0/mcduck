@@ -106,9 +106,9 @@ export class CreateReceiptsRequest extends Message<CreateReceiptsRequest> {
  */
 export class CreateReceiptsResponse extends Message<CreateReceiptsResponse> {
   /**
-   * @generated from field: repeated api.receipts.v1.Receipt receipts = 1;
+   * @generated from field: repeated api.receipts.v1.CreatedReceipt receipts = 1;
    */
-  receipts: Receipt[] = [];
+  receipts: CreatedReceipt[] = [];
 
   constructor(data?: PartialMessage<CreateReceiptsResponse>) {
     super();
@@ -118,7 +118,7 @@ export class CreateReceiptsResponse extends Message<CreateReceiptsResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.receipts.v1.CreateReceiptsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "receipts", kind: "message", T: Receipt, repeated: true },
+    { no: 1, name: "receipts", kind: "message", T: CreatedReceipt, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateReceiptsResponse {
@@ -332,6 +332,49 @@ export class ListReceiptsRequest extends Message<ListReceiptsRequest> {
 
   static equals(a: ListReceiptsRequest | PlainMessage<ListReceiptsRequest> | undefined, b: ListReceiptsRequest | PlainMessage<ListReceiptsRequest> | undefined): boolean {
     return proto3.util.equals(ListReceiptsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message api.receipts.v1.CreatedReceipt
+ */
+export class CreatedReceipt extends Message<CreatedReceipt> {
+  /**
+   * @generated from field: uint64 id = 1;
+   */
+  id = protoInt64.zero;
+
+  /**
+   * @generated from field: api.receipts.v1.ReceiptStatus status = 2;
+   */
+  status = ReceiptStatus.UNSPECIFIED;
+
+  constructor(data?: PartialMessage<CreatedReceipt>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.receipts.v1.CreatedReceipt";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
+    { no: 2, name: "status", kind: "enum", T: proto3.getEnumType(ReceiptStatus) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreatedReceipt {
+    return new CreatedReceipt().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreatedReceipt {
+    return new CreatedReceipt().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreatedReceipt {
+    return new CreatedReceipt().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreatedReceipt | PlainMessage<CreatedReceipt> | undefined, b: CreatedReceipt | PlainMessage<CreatedReceipt> | undefined): boolean {
+    return proto3.util.equals(CreatedReceipt, a, b);
   }
 }
 
