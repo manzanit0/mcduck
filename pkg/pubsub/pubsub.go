@@ -75,20 +75,3 @@ func NewStream(ctx context.Context, url, name, subject string) (jetstream.JetStr
 
 	return js, stream, nil
 }
-
-func NewConsumer(ctx context.Context, url, streamName, consumerName, subject string) (jetstream.Consumer, error) {
-	_, stream, err := NewStream(ctx, url, streamName, subject)
-	if err != nil {
-		return nil, err
-	}
-
-	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Durable:       consumerName,
-		FilterSubject: subject,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return cons, nil
-}
