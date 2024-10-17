@@ -92,9 +92,9 @@ func (d *ReceiptsController) ListReceipts(c *gin.Context) {
 			reviewedCount += 1
 		}
 
-		var total float64
-		for _, expense := range r.Expenses {
-			total += float64(expense.Amount)
+		var total float32
+		for _, e := range r.Expenses {
+			total += expense.ConvertToDollar(int32(e.Amount))
 		}
 
 		v := ReceiptViewModel{
