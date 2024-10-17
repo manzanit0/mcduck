@@ -45,7 +45,7 @@ tasks:
     cmds:
       - |
         OPENAI_API_KEY={{.OPENAI_API_KEY}} \
-        docker compose up --watch
+        docker compose up --watch --menu=false --build --force-recreate
 
   up-web:
     desc: starts the deno app
