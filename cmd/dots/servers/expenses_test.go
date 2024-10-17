@@ -10,6 +10,7 @@ import (
 	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/pgtest"
+	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/internal/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -228,9 +229,17 @@ func TestUpdateExpense(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		receiptsRepo := receipt.NewRepository(db)
+		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+			Amount: 0,
+			Image:  []byte{0x0a, 0x16, 0x61, 0x70, 0x69},
+			Email:  userEmail,
+		})
+		require.NoError(t, err)
+
 		s := servers.NewExpensesServer(db)
 
-		updateReceiptID := uint64(123456)
+		updateReceiptID := uint64(createdReceipt.ID)
 		res, err := s.UpdateExpense(ctx, &connect.Request[expensesv1.UpdateExpenseRequest]{
 			Msg: &expensesv1.UpdateExpenseRequest{
 				Id:        uint64(expenseID),
@@ -244,7 +253,7 @@ func TestUpdateExpense(t *testing.T) {
 		assert.Empty(t, res.Msg.Expense.Category)
 		assert.Empty(t, res.Msg.Expense.Subcategory)
 		assert.Empty(t, res.Msg.Expense.Description)
-		assert.EqualValues(t, 123456, *res.Msg.Expense.ReceiptId)
+		assert.EqualValues(t, createdReceipt.ID, *res.Msg.Expense.ReceiptId)
 	})
 
 	t.Run("all fields are changed", func(t *testing.T) {
@@ -268,6 +277,14 @@ func TestUpdateExpense(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		receiptsRepo := receipt.NewRepository(db)
+		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+			Amount: 0,
+			Image:  []byte{0x0a, 0x16, 0x61, 0x70, 0x69},
+			Email:  userEmail,
+		})
+		require.NoError(t, err)
+
 		s := servers.NewExpensesServer(db)
 
 		updateDate := timestamppb.New(time.Date(1993, 2, 24, 0, 0, 0, 0, time.UTC))
@@ -275,7 +292,7 @@ func TestUpdateExpense(t *testing.T) {
 		updateCategory := "Travel"
 		updateSubcategory := "Flight"
 		updateDescription := "Business trip to NYC"
-		updateReceiptID := uint64(123456)
+		updateReceiptID := uint64(createdReceipt.ID)
 		res, err := s.UpdateExpense(ctx, &connect.Request[expensesv1.UpdateExpenseRequest]{
 			Msg: &expensesv1.UpdateExpenseRequest{
 				Id:          uint64(expenseID),
@@ -294,7 +311,7 @@ func TestUpdateExpense(t *testing.T) {
 		assert.EqualValues(t, "Travel", res.Msg.Expense.Category)
 		assert.EqualValues(t, "Flight", res.Msg.Expense.Subcategory)
 		assert.EqualValues(t, "Business trip to NYC", res.Msg.Expense.Description)
-		assert.EqualValues(t, 123456, *res.Msg.Expense.ReceiptId)
+		assert.EqualValues(t, createdReceipt.ID, *res.Msg.Expense.ReceiptId)
 		assert.EqualValues(t, "24/02/1993", res.Msg.Expense.Date.AsTime().Format("02/01/2006"))
 	})
 
@@ -360,5 +377,38 @@ func TestUpdateExpense(t *testing.T) {
 		assert.Empty(t, res.Msg.Expense.Description)
 		assert.Nil(t, res.Msg.Expense.ReceiptId)
 		assert.EqualValues(t, "24/02/1993", res.Msg.Expense.Date.AsTime().Format("02/01/2006"))
+	})
+
+	t.Run("only existing receipt are valid when changing the ID", func(t *testing.T) {
+		db, err := sqlx.Open("pgx", connectionString)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			err = db.Close()
+			require.NoError(t, err)
+
+			err = dbContainer.Restore(ctx, postgres.WithSnapshotName("create_expense"))
+			require.NoError(t, err)
+		})
+
+		repo := expense.NewRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+			UserEmail: userEmail,
+			Date:      time.Now(),
+			Amount:    12,
+			ReceiptID: nil,
+		})
+		require.NoError(t, err)
+
+		s := servers.NewExpensesServer(db)
+
+		updateReceiptID := uint64(12342)
+		_, err = s.UpdateExpense(ctx, &connect.Request[expensesv1.UpdateExpenseRequest]{
+			Msg: &expensesv1.UpdateExpenseRequest{
+				Id:        uint64(expenseID),
+				ReceiptId: &updateReceiptID,
+			},
+		})
+		require.ErrorContains(t, err, `internal: unable to update expense: unable to execute query: ERROR: insert or update on table "expenses" violates foreign key constraint "fk_receipt_id" (SQLSTATE 23503)`)
 	})
 }
