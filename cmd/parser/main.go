@@ -72,24 +72,47 @@ func run() error {
 	}
 	defer xsql.Close(dbx)
 
-	apiKey := micro.MustGetEnv("OPENAI_API_KEY")
-
-	// Just crash the service if these aren't available.
+	// NOTE: AWS SDK expects the environment variables, so assert their existence.
 	_ = micro.MustGetEnv("AWS_ACCESS_KEY")
 	_ = micro.MustGetEnv("AWS_SECRET_ACCESS_KEY")
 
+	apiKey := micro.MustGetEnv("OPENAI_API_KEY")
 	config, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(awsRegion))
 	if err != nil {
 		return err
 	}
 
-	textractParser := parser.NewTextractParser(config, apiKey)
-	aivisionParser := parser.NewAIVisionParser(apiKey)
+	pdfParser := parser.NewTextractParser(config, apiKey)
+	imageParser := parser.NewAIVisionParser(apiKey)
 
 	// NOTE: this is curently not being used. That's ok though. It's handy to
 	// test behaviour manually since the pubsub mechanism relies on proto
 	// encoding.
-	r.POST("/receipt", func(c *gin.Context) {
+	r.POST("/receipt", endpoint(pdfParser, imageParser))
+
+	natsURL := micro.MustGetEnv("NATS_URL")
+
+	slog.InfoContext(context.Background(), "ensuring stream exists")
+	_, _, err = pubsub.NewStream(context.Background(), natsURL, pubsub.DefaultStreamName, "events.receipts.v1.ReceiptCreated")
+	if err != nil {
+		return err
+	}
+
+	consumer := func(ctx context.Context) error {
+		slog.InfoContext(ctx, "starting consumer in the background")
+		err = ConsumeMessages(ctx, natsURL, dbx, pdfParser, imageParser)
+		if err != nil && err != context.Canceled {
+			return err
+		}
+
+		return nil
+	}
+
+	return micro.RunGracefully(r, consumer)
+}
+
+func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) func(c *gin.Context) {
+	return func(c *gin.Context) {
 		ctx, span := xtrace.GetSpan(c.Request.Context())
 
 		file, err := c.FormFile("receipt")
@@ -117,7 +140,7 @@ func run() error {
 			return
 		}
 
-		receipt, err := parseReceipt(ctx, data, textractParser, aivisionParser)
+		receipt, err := parseReceipt(ctx, data, pdfParser, imageParser)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			slog.ErrorContext(c.Request.Context(), "failed to extract receipt", "error", err.Error())
@@ -126,27 +149,7 @@ func run() error {
 		}
 
 		c.JSON(http.StatusOK, receipt)
-	})
-
-	natsURL := micro.MustGetEnv("NATS_URL")
-
-	slog.InfoContext(context.Background(), "ensuring stream exists")
-	_, _, err = pubsub.NewStream(context.Background(), natsURL, pubsub.DefaultStreamName, "events.receipts.v1.ReceiptCreated")
-	if err != nil {
-		return err
 	}
-
-	consumer := func(ctx context.Context) error {
-		slog.InfoContext(ctx, "starting consumer in the background")
-		err = ConsumeMessages(ctx, natsURL, dbx, textractParser, aivisionParser)
-		if err != nil && err != context.Canceled {
-			return err
-		}
-
-		return nil
-	}
-
-	return micro.RunGracefully(r, consumer)
 }
 
 func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
