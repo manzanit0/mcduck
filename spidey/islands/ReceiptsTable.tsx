@@ -18,7 +18,6 @@ interface TableProps {
 }
 
 interface ViewReceipt extends SerializableReceipt {
-  displayed: boolean;
   checked: boolean;
 }
 
@@ -27,12 +26,12 @@ export default function ReceiptsTable(props: TableProps) {
     return useSignal({
       ...x,
       checked: false,
-      displayed: true,
     });
   });
 
   const globallySelected = useSignal(false);
   const searchText = useSignal("");
+  const checkedReceiptIds = useSignal("");
   const displayedReceipts = useComputed(() =>
     mapped.filter((x) => {
       return x.value.vendor
@@ -60,6 +59,10 @@ export default function ReceiptsTable(props: TableProps) {
         }
       }
     }
+
+    checkedReceiptIds.value = mapped
+      .filter((x) => x.value.checked)
+      .map((x) => x.value.id).join(",");
   };
 
   const updateVendor = async (
@@ -122,6 +125,19 @@ export default function ReceiptsTable(props: TableProps) {
     <div class="sm:rounded-lg">
       <div class="flex flex-column sm:flex-row flex-wrap space-y-4 sm:space-y-0 items-center justify-between pb-4">
         <SearchBox onInput={filterReceipts} />
+        <form method="post">
+          <input
+            name="receipt-ids"
+            value={checkedReceiptIds.value}
+            hidden={true}
+          />
+          <button
+            type="submit"
+            class="flex flex-column rounded-md bg-red-500 px-3 mr-12 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+          >
+            Delete
+          </button>
+        </form>
       </div>
       <GenericTable
         data={displayedReceipts.value}
@@ -136,7 +152,13 @@ export default function ReceiptsTable(props: TableProps) {
             accessor: (r) => (
               <Checkbox
                 checked={r.value.checked}
-                onInput={() => (r.value.checked = !r.value.checked)}
+                onInput={() => {
+                  r.value.checked = !r.value.checked;
+                  checkedReceiptIds.value = displayedReceipts
+                    .value
+                    .filter((x) => x.value.checked)
+                    .map((x) => x.value.id).join(",");
+                }}
               />
             ),
           },
