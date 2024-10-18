@@ -8,9 +8,16 @@ export type NavbarProps = {
 
 export default function Navbar(props: NavbarProps) {
   if (props.state && props.state.loggedIn) {
+    const links = [
+      { name: "Dashboard", url: "/" },
+      { name: "Expenses", url: "/expenses" },
+      { name: "Receipts", url: "/receipts" },
+      { name: "Signout", url: "/signout" },
+    ];
+
     return (
       <nav class="bg-gray-800">
-        <MobileHeader {...props} />
+        <MobileHeader {...props} links={links} />
         <div class="max-sm:hidden mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
           <div class="relative flex h-16 items-center justify-between">
             <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
@@ -44,9 +51,15 @@ export default function Navbar(props: NavbarProps) {
       </nav>
     );
   } else {
+    const links = [
+      { name: "Home", url: "/" },
+      { name: "Live Demo", url: "/greet/javier" },
+      { name: "Register", url: "/register" },
+      { name: "Login", url: "/login" },
+    ];
     return (
       <nav class="bg-gray-800">
-        <MobileHeader {...props} />
+        <MobileHeader {...props} links={links}/>
         <div class="max-sm:hidden mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
           <div class="relative flex h-16 items-center justify-between">
             <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">

@@ -2,6 +2,10 @@ import { useSignal } from "@preact/signals";
 
 export type MobileHeaderProps = {
   currentRoute: string;
+  links: {
+    name: string;
+    url: string;
+  }[];
 };
 
 export default function MobileHeader(props: MobileHeaderProps) {
@@ -67,10 +71,9 @@ export default function MobileHeader(props: MobileHeaderProps) {
         id="mobile-menu"
       >
         <div class="space-y-1 px-2 pb-3 pt-2">
-          {mobileNavLink("Home", "/", props.currentRoute)}
-          {mobileNavLink("Live Demo", "/greet/javier", props.currentRoute)}
-          {mobileNavLink("Register", "/register", props.currentRoute)}
-          {mobileNavLink("Login", "/login", props.currentRoute)}
+          {props.links.map((x) =>
+            mobileNavLink(x.name, x.url, props.currentRoute)
+          )}
         </div>
       </div>
     </div>
