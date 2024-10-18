@@ -36,11 +36,20 @@ const (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("exiting server", "error", err.Error())
+		os.Exit(1)
+	}
+
+	slog.Info("exiting server")
+}
+
+func run() error {
 	xlog.InitSlog()
 
 	tp, err := xtrace.TracerFromEnv(context.Background(), serviceName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer tp.Shutdown(context.Background())
 
@@ -59,7 +68,7 @@ func main() {
 
 	dbx, err := xsql.OpenFromEnv()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer xsql.Close(dbx)
 
@@ -71,7 +80,7 @@ func main() {
 
 	config, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(awsRegion))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	textractParser := parser.NewTextractParser(config, apiKey)
@@ -124,7 +133,7 @@ func main() {
 	slog.InfoContext(context.Background(), "ensuring stream exists")
 	_, _, err = pubsub.NewStream(context.Background(), natsURL, pubsub.DefaultStreamName, "events.receipts.v1.ReceiptCreated")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	consumer := func(ctx context.Context) error {
@@ -137,12 +146,7 @@ func main() {
 		return nil
 	}
 
-	if err := micro.RunGracefully(r, consumer); err != nil {
-		slog.Error("api ended with error", "error", err.Error())
-		os.Exit(1)
-	}
-
-	slog.Info(fmt.Sprintf("shutting down %s service", serviceName))
+	return micro.RunGracefully(r, consumer)
 }
 
 func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
