@@ -165,17 +165,17 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 		return fmt.Errorf("open jetstream: %w", err)
 	}
 
-	msgCh := make(chan *nats.Msg, 8192)
-
-	// FIXME: we should actually AckTerm() the messages manually and update the
-	// receipt status to "failed to process" or something similar.
-	_, err = jss.ChanQueueSubscribe("events.receipts.v1.ReceiptCreated", serviceName, msgCh, nats.ManualAck(), nats.MaxDeliver(5))
+	const maxDeliveries = 5
+	const randomHighNumber = 8192
+	msgCh := make(chan *nats.Msg, randomHighNumber)
+	_, err = jss.ChanQueueSubscribe("events.receipts.v1.ReceiptCreated", serviceName, msgCh, nats.ManualAck(), nats.MaxDeliver(maxDeliveries))
 	if err != nil {
 		return fmt.Errorf("subscribe queue: %w", err)
 	}
 
-	// TODO: might be better to create more queue subscribers instead.
-	pool := pond.New(100, 1000, pond.Context(ctx))
+	const randomWorkerCount = 100
+	const randomPoolCapacity = 1000
+	pool := pond.New(randomWorkerCount, randomPoolCapacity, pond.Context(ctx))
 	defer pool.StopAndWait()
 
 	for {
@@ -187,24 +187,68 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 			pool.Submit(func() {
 				slog.InfoContext(ctx, "Received events.receipts.v1.ReceiptCreated")
 
-				err := processMessage(msg, dbx, pdfParser, imageParser)
+				meta, err := msg.Metadata()
 				if err != nil {
-					slog.ErrorContext(ctx, "failed to process message", "error", err.Error())
-					err = msg.Nak()
-					if err != nil {
-						slog.ErrorContext(ctx, "failed to NACK message", "error", err.Error())
+					slog.ErrorContext(ctx, "failed to get message metadata", "error", err.Error())
+					return
+				}
+
+				switch {
+				case meta.NumDelivered == maxDeliveries:
+					if err = processFailedMessage(msg, dbx); err != nil {
+						slog.InfoContext(ctx, "failed to mark as unprocessable")
+						return
 					}
-				} else {
+
+					err = msg.Term()
+					if err != nil {
+						slog.ErrorContext(ctx, "failed to TERM message", "error", err.Error())
+					}
+
+				default:
+					err = processMessage(msg, dbx, pdfParser, imageParser)
+					if err != nil {
+						slog.ErrorContext(ctx, "failed to process message", "error", err.Error())
+						err = msg.Nak()
+						if err != nil {
+							slog.ErrorContext(ctx, "failed to NACK message", "error", err.Error())
+						}
+
+						return
+					}
+
 					err = msg.Ack()
 					if err != nil {
 						slog.ErrorContext(ctx, "failed to ACK message", "error", err.Error())
 					}
+
+					slog.InfoContext(ctx, "correctly processed message")
 				}
 			})
 
 		case <-time.After(1 * time.Second):
 		}
 	}
+}
+
+func processFailedMessage(msg *nats.Msg, dbx *sqlx.DB) error {
+	ctx, span := xtrace.StartSpan(context.Background(), "Consume ReceiptCreated event")
+	defer span.End()
+
+	ev, err := pubsub.UnmarshalProto(msg.Data, &receiptsevv1.ReceiptCreated{})
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	receiptRepo := receipt.NewRepository(dbx)
+	err = receiptRepo.MarkFailedToProcess(ctx, ev.Receipt.Id)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
@@ -240,10 +284,13 @@ func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser,
 	defer xsql.TxClose(txn)
 
 	receiptRepo := receipt.NewRepository(dbx)
+
+	pendingReview := true
 	err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, receipt.UpdateReceiptRequest{
-		ID:     int64(ev.Receipt.Id),
-		Vendor: &parsedReceipt.Vendor,
-		Date:   &parsedTime,
+		ID:            int64(ev.Receipt.Id),
+		Vendor:        &parsedReceipt.Vendor,
+		Date:          &parsedTime,
+		PendingReview: &pendingReview,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

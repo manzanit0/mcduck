@@ -26,6 +26,7 @@ type Receipt struct {
 type dbReceipt struct {
 	ID            int64   `db:"id"`
 	PendingReview bool    `db:"pending_review"`
+	Status        string  `db:"status"`
 	Image         []byte  `db:"receipt_image"`
 	UserEmail     string  `db:"user_email"`
 	Vendor        *string `db:"vendor"`
@@ -162,6 +163,11 @@ func (r *Repository) UpdateReceipt(ctx context.Context, e UpdateReceiptRequest) 
 
 	if e.PendingReview != nil {
 		builder = builder.Set("pending_review", *e.PendingReview)
+		if *e.PendingReview {
+			builder = builder.Set("status", "pending_review")
+		} else {
+			builder = builder.Set("status", "reviewed")
+		}
 		shouldUpdate = true
 	}
 
@@ -223,6 +229,11 @@ func (r *Repository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e U
 
 	if e.PendingReview != nil {
 		builder = builder.Set("pending_review", *e.PendingReview)
+		if *e.PendingReview {
+			builder = builder.Set("status", "pending_review")
+		} else {
+			builder = builder.Set("status", "reviewed")
+		}
 		shouldUpdate = true
 	}
 
@@ -261,6 +272,30 @@ func (r *Repository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e U
 	return nil
 }
 
+func (r *Repository) MarkFailedToProcess(ctx context.Context, receiptID uint64) error {
+	ctx, span := xtrace.StartSpan(ctx, "Update Receipt")
+	defer span.End()
+
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	builder := psql.
+		Update("receipts").
+		Set("status", "failed_preprocessing").
+		Where(sq.Eq{"id": receiptID})
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return fmt.Errorf("compile receipts query: %w", err)
+	}
+
+	_, err = r.dbx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Repository) ListReceipts(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts")
 	defer span.End()
@@ -268,7 +303,7 @@ func (r *Repository) ListReceipts(ctx context.Context, email string) ([]Receipt,
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.
-		Select("id", "vendor", "pending_review", "receipt_date").
+		Select("id", "vendor", "pending_review", "receipt_date", "status").
 		From("receipts").
 		Where(sq.Eq{"user_email": email}).
 		ToSql()
@@ -297,7 +332,7 @@ func (r *Repository) ListReceiptsCurrentMonth(ctx context.Context, email string)
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.
-		Select("id", "vendor", "pending_review", "receipt_date").
+		Select("id", "vendor", "pending_review", "receipt_date", "status").
 		From("receipts").
 		Where(sq.And{
 			sq.Eq{"user_email": email},
@@ -330,7 +365,7 @@ func (r *Repository) ListReceiptsPreviousMonth(ctx context.Context, email string
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.
-		Select("id", "vendor", "pending_review", "receipt_date").
+		Select("id", "vendor", "pending_review", "receipt_date", "status").
 		From("receipts").
 		Where(sq.And{
 			sq.Eq{"user_email": email},
@@ -363,7 +398,7 @@ func (r *Repository) ListReceiptsPendingReview(ctx context.Context, email string
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.
-		Select("id", "vendor", "pending_review", "receipt_date").
+		Select("id", "vendor", "pending_review", "receipt_date", "status").
 		From("receipts").
 		Where(sq.And{
 			sq.Eq{"user_email": email},
@@ -395,7 +430,7 @@ func (r *Repository) GetReceipt(ctx context.Context, receiptID uint64) (*Receipt
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 	query, args, err := psql.
-		Select("id", "vendor", "pending_review", "created_at", "receipt_image", "user_email", "receipt_date").
+		Select("id", "vendor", "pending_review", "created_at", "receipt_image", "user_email", "receipt_date", "status").
 		From("receipts").
 		Where(sq.Eq{"id": receiptID}).
 		ToSql()
