@@ -15,6 +15,7 @@ import (
 type Receipt struct {
 	ID            int64
 	PendingReview bool
+	Status        string
 	Image         []byte
 	Vendor        string
 	UserEmail     string
@@ -41,6 +42,7 @@ func (r *dbReceipt) MapReceipt() *Receipt {
 	if r.Vendor != nil {
 		vendor = *r.Vendor
 	}
+
 	return &Receipt{
 		ID:            r.ID,
 		PendingReview: r.PendingReview,
@@ -49,6 +51,7 @@ func (r *dbReceipt) MapReceipt() *Receipt {
 		CreatedAt:     r.CreatedAt,
 		UpdatedAt:     r.UpdatedAt,
 		Vendor:        vendor,
+		Status:        r.Status,
 		UserEmail:     r.UserEmail,
 	}
 }

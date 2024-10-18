@@ -1,6 +1,6 @@
 import GenericTable from "../components/GenericTable.tsx";
 import { Signal, useComputed, useSignal } from "@preact/signals";
-import { ReceiptStatus } from "../gen/receipts.v1/receipts_pb.ts";
+import { ReceiptStatus } from "../gen/api/receipts.v1/receipts_pb.ts";
 import { JSX } from "preact/jsx-runtime";
 import { SerializableReceipt } from "../lib/types.ts";
 import { updateReceipt } from "../lib/receipts.ts";

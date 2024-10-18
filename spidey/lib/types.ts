@@ -1,4 +1,4 @@
-import { Expense, Receipt } from "../gen/receipts.v1/receipts_pb.ts";
+import { Expense, Receipt } from "../gen/api/receipts.v1/receipts_pb.ts";
 
 export interface SerializableReceipt {
   id: bigint;

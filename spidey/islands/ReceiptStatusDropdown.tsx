@@ -1,5 +1,5 @@
 import { useComputed, useSignal, effect } from "@preact/signals";
-import { ReceiptStatus } from "../gen/receipts.v1/receipts_pb.ts";
+import { ReceiptStatus } from "../gen/api/receipts.v1/receipts_pb.ts";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 
 interface ReceiptStatusDropdownProps {
@@ -37,6 +37,9 @@ export default function ReceiptStatusDropdown(
         break;
       case ReceiptStatus.REVIEWED:
         option = reviewed(false);
+        break
+      case ReceiptStatus.FAILED_PREPROCESSING:
+        option = failedProcessing(false);
         break;
       default:
         break;
@@ -169,7 +172,7 @@ function pendingReview(selected: boolean) {
   return (
     <>
       <div class="flex items-center">
-        <div class="h-2.5 w-2.5 rounded-full bg-red-500 me-2"></div>
+        <div class="h-2.5 w-2.5 rounded-full bg-yellow-500 me-2"></div>
         <span class={`ml-3 block truncate ${fontClass}`}>Pending Review</span>
       </div>
       {selected ? checkmark() : <></>}
@@ -182,8 +185,21 @@ function na(selected: boolean) {
   return (
     <>
       <div class="flex items-center">
-        <div class="h-2.5 w-2.5 rounded-full bg-yellow-500 me-2"></div>
-        <span class={`ml-3 block truncate ${fontClass}`}>N/a</span>
+        <div class="h-2.5 w-2.5 rounded-full bg-blue-500 me-2"></div>
+        <span class={`ml-3 block truncate ${fontClass}`}>Waiting</span>
+      </div>
+      {selected ? checkmark() : <></>}
+    </>
+  );
+}
+
+function failedProcessing(selected: boolean) {
+  const fontClass = selected ? "font-semibold" : "font-normal";
+  return (
+    <>
+      <div class="flex items-center">
+        <div class="h-2.5 w-2.5 rounded-full bg-red-500 me-2"></div>
+        <span class={`ml-3 block truncate ${fontClass}`}>Failed Preprocessing</span>
       </div>
       {selected ? checkmark() : <></>}
     </>

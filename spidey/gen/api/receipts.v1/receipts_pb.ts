@@ -56,12 +56,24 @@ export enum ReceiptStatus {
    * @generated from enum value: RECEIPT_STATUS_REVIEWED = 2;
    */
   REVIEWED = 2,
+
+  /**
+   * @generated from enum value: RECEIPT_STATUS_UPLOADED = 3;
+   */
+  UPLOADED = 3,
+
+  /**
+   * @generated from enum value: RECEIPT_STATUS_FAILED_PREPROCESSING = 4;
+   */
+  FAILED_PREPROCESSING = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ReceiptStatus)
 proto3.util.setEnumType(ReceiptStatus, "api.receipts.v1.ReceiptStatus", [
   { no: 0, name: "RECEIPT_STATUS_UNSPECIFIED" },
   { no: 1, name: "RECEIPT_STATUS_PENDING_REVIEW" },
   { no: 2, name: "RECEIPT_STATUS_REVIEWED" },
+  { no: 3, name: "RECEIPT_STATUS_UPLOADED" },
+  { no: 4, name: "RECEIPT_STATUS_FAILED_PREPROCESSING" },
 ]);
 
 /**

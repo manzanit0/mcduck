@@ -207,11 +207,21 @@ func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[
 	for i := len(receipts) - 1; i >= 0; i-- {
 		switch req.Msg.Status {
 		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW:
-			if receipts[i].PendingReview {
+			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW {
 				delete(receipts, i)
 			}
 		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED:
-			if !receipts[i].PendingReview {
+			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED {
+				delete(receipts, i)
+			}
+
+		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING:
+			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING {
+				delete(receipts, i)
+			}
+
+		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED:
+			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED {
 				delete(receipts, i)
 			}
 		default:
@@ -326,9 +336,19 @@ func delete[T any](s []T, i int) []T {
 }
 
 func mapReceiptStatus(r *receipt.Receipt) receiptsv1.ReceiptStatus {
-	if r.PendingReview {
+	switch r.Status {
+	case "uploaded":
+		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED
+
+	case "failed_preprocessing":
+		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING
+
+	case "pending_review":
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW
+
+	case "reviewed":
+		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED
 	}
 
-	return receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED
+	return receiptsv1.ReceiptStatus_RECEIPT_STATUS_UNSPECIFIED
 }

@@ -1,8 +1,8 @@
 import { RouteContext } from "$fresh/server.ts";
 import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { ReceiptsService } from "../../gen/receipts.v1/receipts_connect.ts";
-import { ListReceiptsSince } from "../../gen/receipts.v1/receipts_pb.ts";
+import { ReceiptsService } from "../../gen/api/receipts.v1/receipts_connect.ts";
+import { ListReceiptsSince } from "../../gen/api/receipts.v1/receipts_pb.ts";
 import ReceiptsTable from "../../islands/ReceiptsTable.tsx";
 import { mapReceiptsToSerializable } from "../../lib/types.ts";
 import { AuthState } from "../../lib/auth.ts";
@@ -29,6 +29,7 @@ export default async function List(
   );
 
   console.log("got", res.receipts.length, "receipts");
+  console.log("receipts", res.receipts);
 
   return (
     <div class="m-6">

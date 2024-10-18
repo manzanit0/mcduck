@@ -1,10 +1,9 @@
 import { RouteContext } from "$fresh/server.ts";
 import { encodeBase64 } from "$std/encoding/base64.ts";
-// import * as base64 from "jsr:@std/encoding/base64";
 import ExpensesTable from "../../islands/ExpensesTable.tsx";
 import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { ReceiptsService } from "../../gen/receipts.v1/receipts_connect.ts";
+import { ReceiptsService } from "../../gen/api/receipts.v1/receipts_connect.ts";
 import {
   mapExpensesToSerializable,
   mapReceiptsToSerializable,

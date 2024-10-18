@@ -1,8 +1,8 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { AuthService } from "../../gen/auth.v1/auth_connect.ts";
-import { LoginResponse } from "../../gen/auth.v1/auth_pb.ts";
+import { AuthService } from "../../gen/api/auth.v1/auth_connect.ts";
+import { LoginResponse } from "../../gen/api/auth.v1/auth_pb.ts";
 
 const url = Deno.env.get("API_HOST")!;
 

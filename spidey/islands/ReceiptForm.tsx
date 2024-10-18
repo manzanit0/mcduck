@@ -6,7 +6,7 @@ import ReceiptStatusDropdown from "./ReceiptStatusDropdown.tsx";
 import { SerializableReceipt } from "../lib/types.ts";
 import { JSX } from "preact/jsx-runtime";
 import { Timestamp } from "@bufbuild/protobuf";
-import { ReceiptStatus } from "../gen/receipts.v1/receipts_pb.ts";
+import { ReceiptStatus } from "../gen/api/receipts.v1/receipts_pb.ts";
 import { updateReceipt } from "../lib/receipts.ts";
 
 interface ReceiptFormProps {
