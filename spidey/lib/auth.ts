@@ -1,7 +1,7 @@
 import { getCookies } from "$std/http/cookie.ts";
 import { decodeJwt } from "$jose/index.ts";
 
-const authCookieName = "_mcduck_fresh_key";
+export const authCookieName = "_mcduck_key";
 
 export interface AuthState {
     loggedIn: boolean;

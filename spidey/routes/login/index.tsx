@@ -3,6 +3,7 @@ import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { AuthService } from "../../gen/api/auth.v1/auth_connect.ts";
 import { LoginResponse } from "../../gen/api/auth.v1/auth_pb.ts";
+import { authCookieName } from "../../lib/auth.ts";
 
 const url = Deno.env.get("API_HOST")!;
 
@@ -33,7 +34,7 @@ export const handler: Handlers = {
     const resp = new Response(null, { status: 303 });
     resp.headers.set("location", "/");
     // TODO: set Expires and Max-Age properties for cookie
-    resp.headers.set("Set-Cookie", `_mcduck_fresh_key=${login.token}`);
+    resp.headers.set("Set-Cookie", `${authCookieName}=${login.token}`);
     return resp;
   },
 };

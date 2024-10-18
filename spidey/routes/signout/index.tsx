@@ -1,4 +1,5 @@
 import { FreshContext } from "$fresh/server.ts";
+import { authCookieName } from "../../lib/auth.ts";
 
 export const handler = (_req: Request, _ctx: FreshContext): Response => {
   console.log("signout");
@@ -7,7 +8,7 @@ export const handler = (_req: Request, _ctx: FreshContext): Response => {
   resp.headers.set("location", "/");
   resp.headers.set(
     "Set-Cookie",
-    `_mcduck_fresh_key=""; expires=${new Date(0).toUTCString()};`,
+    `${authCookieName}=""; expires=${new Date(0).toUTCString()};`,
   );
   return resp;
 };
