@@ -127,7 +127,8 @@ func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) 
 		err = c.SaveUploadedFile(file, filePath)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unable to save file to disk: %s", err.Error())})
+			slog.ErrorContext(ctx, "unable to save file to disk", "error", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable to save file to disk: %s", err.Error())})
 			return
 		}
 
@@ -136,14 +137,15 @@ func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) 
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unable to read file from disk: %s", err.Error())})
+			slog.ErrorContext(ctx, "unable to read file from disk", "error", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable to read file from disk: %s", err.Error())})
 			return
 		}
 
 		receipt, err := parseReceipt(ctx, data, pdfParser, imageParser)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			slog.ErrorContext(c.Request.Context(), "failed to extract receipt", "error", err.Error())
+			slog.ErrorContext(ctx, "failed to extract receipt", "error", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("unable extract data from receipt: %s", err.Error())})
 			return
 		}
