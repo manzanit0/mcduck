@@ -38,8 +38,8 @@ tasks:
     preconditions:
       - msg: Have you logged in to the railway CLI?
         sh: railway whoami
-      - msg: Have you run "task smee" in a separate terminal?
-        sh: pgrep -f "task smee"
+      # - msg: Have you run "task smee" in a separate terminal?
+      #   sh: pgrep -f "task smee"
       - msg: Telegram webhook isn't set to $SMEE_URL. Make sure to set it through the setWebhook API call.
         sh: test $(curl -s https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo | jq -r .result.url) = "$SMEE_URL"
     cmds:
