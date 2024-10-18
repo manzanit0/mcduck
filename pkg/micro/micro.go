@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -49,7 +50,7 @@ func (s *Service) Run() error {
 	return RunGracefully(s.Engine)
 }
 
-func RunGracefully(mux http.Handler) error {
+func RunGracefully(mux http.Handler, fns ...func(context.Context) error) error {
 	var port string
 	if port = os.Getenv("PORT"); port == "" {
 		port = "8080"
@@ -71,6 +72,22 @@ func RunGracefully(mux http.Handler) error {
 		stop()
 	}()
 
+	var wg sync.WaitGroup
+	for _, fn := range fns {
+		wg.Add(1)
+		go func(ctx context.Context) {
+			defer wg.Done()
+			err := fn(ctx)
+			if err != nil {
+				slog.ErrorContext(ctx, "process ended abruptly", "error", err.Error())
+			} else {
+				slog.InfoContext(ctx, "process ended gracefully")
+			}
+
+			stop()
+		}(ctx)
+	}
+
 	<-ctx.Done()
 	stop()
 
@@ -79,6 +96,8 @@ func RunGracefully(mux http.Handler) error {
 	if err := srv.Shutdown(ctx); err != nil {
 		return fmt.Errorf("server forced to shutdown: %w", err)
 	}
+
+	wg.Wait()
 
 	slog.Info("server exited")
 	return nil

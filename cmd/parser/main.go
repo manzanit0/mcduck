@@ -7,9 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/alitto/pond"
@@ -24,6 +22,7 @@ import (
 	"github.com/manzanit0/mcduck/pkg/micro"
 	"github.com/manzanit0/mcduck/pkg/openai"
 	"github.com/manzanit0/mcduck/pkg/pubsub"
+	"github.com/manzanit0/mcduck/pkg/xlog"
 	"github.com/manzanit0/mcduck/pkg/xsql"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 	"github.com/nats-io/nats.go"
@@ -37,11 +36,26 @@ const (
 )
 
 func main() {
-	svc, err := micro.NewGinService(serviceName)
+	xlog.InitSlog()
+
+	tp, err := xtrace.TracerFromEnv(context.Background(), serviceName)
 	if err != nil {
-		// FIXME: remove panics and create a run() function that returns an error.
 		panic(err)
 	}
+	defer tp.Shutdown(context.Background())
+
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.Default()
+	r.Use(xlog.EnhanceContext)
+	r.Use(tp.TraceRequests())
+	r.Use(tp.EnhanceTraceMetadata())
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
 
 	dbx, err := xsql.OpenFromEnv()
 	if err != nil {
@@ -66,7 +80,7 @@ func main() {
 	// NOTE: this is curently not being used. That's ok though. It's handy to
 	// test behaviour manually since the pubsub mechanism relies on proto
 	// encoding.
-	svc.Engine.POST("/receipt", func(c *gin.Context) {
+	r.POST("/receipt", func(c *gin.Context) {
 		ctx, span := xtrace.GetSpan(c.Request.Context())
 
 		file, err := c.FormFile("receipt")
@@ -105,28 +119,30 @@ func main() {
 		c.JSON(http.StatusOK, receipt)
 	})
 
-	// FIXME: this is also done in the micro package. Get the abstraction right.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
 	natsURL := micro.MustGetEnv("NATS_URL")
 
-	// FIXME: need to exit gracefully here.
-	go func() {
+	slog.InfoContext(context.Background(), "ensuring stream exists")
+	_, _, err = pubsub.NewStream(context.Background(), natsURL, pubsub.DefaultStreamName, "events.receipts.v1.ReceiptCreated")
+	if err != nil {
+		panic(err)
+	}
+
+	consumer := func(ctx context.Context) error {
+		slog.InfoContext(ctx, "starting consumer in the background")
 		err = ConsumeMessages(ctx, natsURL, dbx, textractParser, aivisionParser)
 		if err != nil && err != context.Canceled {
-			slog.ErrorContext(ctx, "consumer ended with error", "error", err.Error())
-			panic(err)
-		} else {
-			slog.InfoContext(ctx, "consumer ended gracefully")
-			os.Exit(0)
+			return err
 		}
-	}()
 
-	if err := svc.Run(); err != nil {
+		return nil
+	}
+
+	if err := micro.RunGracefully(r, consumer); err != nil {
 		slog.Error("api ended with error", "error", err.Error())
 		os.Exit(1)
 	}
+
+	slog.Info(fmt.Sprintf("shutting down %s service", serviceName))
 }
 
 func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
