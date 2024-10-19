@@ -66,6 +66,7 @@ tasks:
       - railway up -s mcduck --detach
       - railway up -s tgram-bot --detach
       - railway up -s parser --detach
+      - railway up -s dots --detach
 
   rw-pgcli:
     desc: Connects to the railway.app cloud postgres database via "pgcli"
