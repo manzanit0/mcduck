@@ -23,6 +23,7 @@ tasks:
     cmds:
       - go build -race ./...
       - go test -cover -shuffle=on -race ./...
+
   smee:
     desc: sets up local webhook for Telegram bot
     cmd: smee -u "$SMEE_URL" -p 8081 -P /telegram/webhook
@@ -67,6 +68,8 @@ tasks:
       - railway up -s tgram-bot --detach
       - railway up -s parser --detach
       - railway up -s dots --detach
+      - deno task --swd spidey build
+      - deployctl deploy --prod --project=mcduck --entrypoint=spidey/main.ts
 
   rw-pgcli:
     desc: Connects to the railway.app cloud postgres database via "pgcli"
