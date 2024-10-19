@@ -3,8 +3,6 @@ build/
 tmp
 vendor
 .env
+.envrc
 .aider*
-<<<<<<< Updated upstream
-=======
 spidey/_fresh
->>>>>>> Stashed changes

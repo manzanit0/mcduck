@@ -16,7 +16,7 @@ tasks:
 
   format-proto:
     desc: format protobuf files
-    cmd: buf format --config api/buf.yaml -w
+    cmd: buf format -w
 
   test:
     desc: check code compiles and run unit tests
