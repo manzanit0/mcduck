@@ -101,7 +101,7 @@ func TestCreateReceipt(t *testing.T) {
 
 		receipt := receipts[0]
 		require.NoError(t, err)
-		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW)
+		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED)
 	})
 
 	t.Run("invalid dates are transformed to 'now'", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestCreateReceipt(t *testing.T) {
 
 		receipt := receipts[0]
 		require.NoError(t, err)
-		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW)
+		assert.Equal(t, receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED)
 	})
 
 	t.Run("empty images are rejected", func(t *testing.T) {
@@ -585,7 +585,7 @@ func TestGetReceipt(t *testing.T) {
 		assert.Equal(t, res.Msg.Receipt.Id, uint64(existingreceipt.ID))
 		assert.Equal(t, res.Msg.Receipt.Vendor, "vendor")
 		assert.Equal(t, res.Msg.Receipt.File, []byte("foo"))
-		assert.Equal(t, res.Msg.Receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW)
+		assert.Equal(t, res.Msg.Receipt.Status, receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED)
 		assert.Equal(t, res.Msg.Receipt.Date.AsTime().Format("02/01/2006"), time.Now().Format("02/01/2006"))
 
 		require.Len(t, res.Msg.Receipt.Expenses, 1)

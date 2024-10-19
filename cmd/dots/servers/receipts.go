@@ -114,7 +114,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 	for e := range ch {
 		res.Msg.Receipts = append(res.Msg.Receipts, &receiptsv1.CreatedReceipt{
 			Id:     uint64(e.ID),
-			Status: mapReceiptStatus(e),
+			Status: receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED,
 		})
 	}
 
