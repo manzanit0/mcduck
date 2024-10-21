@@ -13,6 +13,7 @@ import (
 	"github.com/manzanit0/mcduck/cmd/bot/internal/bot"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/micro"
 	"github.com/manzanit0/mcduck/pkg/tgram"
 	"github.com/manzanit0/mcduck/pkg/xhttp"
@@ -34,8 +35,11 @@ func main() {
 	interceptor, _ := otelconnect.NewInterceptor()
 	receiptsClient := receiptsv1connect.NewReceiptsServiceClient(xhttp.NewClient(), micro.MustGetEnv("PRIVATE_DOTS_HOST"), connect.WithInterceptors(interceptor))
 	usersClient := usersv1connect.NewUsersServiceClient(xhttp.NewClient(), micro.MustGetEnv("PRIVATE_DOTS_HOST"), connect.WithInterceptors(interceptor))
+	uploader := mcduck.NewReceiptUploader(usersClient, receiptsClient)
+
 	tgramClient := tgram.NewClient(xhttp.NewClient(), micro.MustGetEnv("TELEGRAM_BOT_TOKEN"))
-	svc.Engine.POST("/telegram/webhook", telegramWebhookController(tgramClient, usersClient, receiptsClient))
+
+	svc.Engine.POST("/telegram/webhook", telegramWebhookController(tgramClient, uploader))
 
 	if err := svc.Run(); err != nil {
 		slog.Error("run ended with error", "error", err.Error())
@@ -43,7 +47,7 @@ func main() {
 	}
 }
 
-func telegramWebhookController(tgramClient tgram.Client, usersClient usersv1connect.UsersServiceClient, receiptsClient receiptsv1connect.ReceiptsServiceClient) func(c *gin.Context) {
+func telegramWebhookController(tgramClient tgram.Client, uploader mcduck.ReceiptUploader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx, span := xtrace.GetSpan(c.Request.Context())
 
@@ -74,7 +78,7 @@ func telegramWebhookController(tgramClient tgram.Client, usersClient usersv1conn
 		case r.Message != nil && (len(r.Message.Photos) > 0 || r.Message.Document != nil):
 			span.SetAttributes(attribute.String("mduck.telegram.command", "upload"))
 
-			res := bot.ParseReceipt(ctx, tgramClient, usersClient, receiptsClient, &r)
+			res := bot.UploadReceipt(ctx, tgramClient, uploader, &r)
 			c.JSON(http.StatusOK, res)
 
 		default:
