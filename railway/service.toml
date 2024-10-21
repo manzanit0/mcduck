@@ -1,16 +1,18 @@
 [build]
 builder = "nixpacks"
-watchPatterns = [
-    "cmd/api/**",
-    "pkg/**",
-    "internal/**",
-    "railway",
-    "go.mod",
-    "go.sum",
-]
 buildCommand = "go build -o bin/api ./cmd/api"
+watchPatterns = [
+  "cmd/api/**",
+  "pkg/**", 
+  "internal/**", 
+  "gen/**",
+  "railway/bot.toml", 
+  "go.mod", 
+  "go.sum",
+]
 
 [deploy]
+numReplicas = 1 
 startCommand = "bin/api"
 healthcheckPath = "/ping"
 restartPolicyType = "on_failure"

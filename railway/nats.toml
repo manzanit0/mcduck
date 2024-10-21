@@ -1,8 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "nats-server --name=my-nats --http_port=8222 --js --sd=/data"
-healthcheckPath = "/varz"
-restartPolicyType = "always"
-restartPolicyMaxRetries = 10
