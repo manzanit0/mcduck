@@ -12,7 +12,7 @@ services:
     ports:
       - "8222:8222"
       - "4222:4222"
-    command: 
+    command:
       - "--name=my-nats"
       # TODO: we can look into the cluster stuff when deploying high availability
       # - "--cluster_name=my-nats-cluster"
@@ -120,7 +120,6 @@ services:
       - 8081:8080
     environment:
       - MCDUCK_HOST=http://service:8080
-      - MCDUCK_AUTH_TOKEN=fake
       - PRIVATE_DOTS_HOST=http://dots:8080
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
