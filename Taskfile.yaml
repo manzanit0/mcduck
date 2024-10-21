@@ -68,7 +68,7 @@ tasks:
       - railway up -s tgram-bot --detach
       - railway up -s parser --detach
       - railway up -s dots --detach
-      - deno task --swd spidey build
+      - deno task --cwd spidey build
       - deployctl deploy --prod --project=mcduck --entrypoint=spidey/main.ts
 
   rw-pgcli:
