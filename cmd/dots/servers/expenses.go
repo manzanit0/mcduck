@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/jmoiron/sqlx"
@@ -37,22 +39,24 @@ func (e *expensesServer) CreateExpense(context.Context, *connect.Request[expense
 }
 
 // DeleteExpense implements expensesv1connect.ExpensesServiceClient.
-func (e *expensesServer) DeleteExpense(context.Context, *connect.Request[expensesv1.DeleteExpenseRequest]) (*connect.Response[expensesv1.DeleteExpenseResponse], error) {
-	panic("unimplemented")
+func (e *expensesServer) DeleteExpense(ctx context.Context, req *connect.Request[expensesv1.DeleteExpenseRequest]) (*connect.Response[expensesv1.DeleteExpenseResponse], error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.Int("expense.id", int(req.Msg.Id)))
+
+	err := e.Expenses.DeleteExpense(ctx, int64(req.Msg.Id))
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to delete expense", "error", err.Error())
+		span.SetStatus(codes.Error, err.Error())
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to delete expense: %w", err))
+	}
+
+	res := connect.NewResponse(&expensesv1.DeleteExpenseResponse{})
+	return res, nil
 }
 
 // ListExpenses implements expensesv1connect.ExpensesServiceClient.
 func (e *expensesServer) ListExpenses(context.Context, *connect.Request[expensesv1.ListExpensesRequest]) (*connect.Response[expensesv1.ListExpensesResponse], error) {
 	panic("unimplemented")
-}
-
-type UpdateExpense struct {
-	Date        *string  `json:"date"`
-	Amount      *float32 `json:"amount,string"`
-	Category    *string  `json:"category"`
-	Subcategory *string  `json:"subcategory"`
-	Description *string  `json:"description"`
-	ReceiptID   *uint64  `json:"receipt_id,string"`
 }
 
 // UpdateExpense implements expensesv1connect.ExpensesServiceClient.
