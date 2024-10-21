@@ -23,6 +23,7 @@ type Receipt struct {
 	Vendor        string
 	UserEmail     string
 	Date          time.Time
+	TotalAmount   uint64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -34,6 +35,7 @@ type dbReceipt struct {
 	Image         []byte  `db:"receipt_image"`
 	UserEmail     string  `db:"user_email"`
 	Vendor        *string `db:"vendor"`
+	TotalAmount   *uint64 `db:"total_amount"`
 
 	Date      time.Time `db:"receipt_date"`
 	CreatedAt time.Time `db:"created_at"`
@@ -41,22 +43,26 @@ type dbReceipt struct {
 }
 
 func (r *dbReceipt) MapReceipt() *Receipt {
-	var vendor string
-	if r.Vendor != nil {
-		vendor = *r.Vendor
-	}
-
-	return &Receipt{
+	receipt := Receipt{
 		ID:            r.ID,
 		PendingReview: r.PendingReview,
 		Image:         r.Image,
 		Date:          r.Date,
 		CreatedAt:     r.CreatedAt,
 		UpdatedAt:     r.UpdatedAt,
-		Vendor:        vendor,
 		Status:        r.Status,
 		UserEmail:     r.UserEmail,
 	}
+
+	if r.Vendor != nil {
+		receipt.Vendor = *r.Vendor
+	}
+
+	if r.TotalAmount != nil {
+		receipt.TotalAmount = *r.TotalAmount
+	}
+
+	return &receipt
 }
 
 type ReceiptRepository struct {
@@ -582,4 +588,83 @@ func (a *AIaugmentor) AugmentCreatedReceipt(ctx context.Context, ev *receiptsevv
 	}
 
 	return nil
+}
+
+type SinceFilter string
+
+const (
+	SinceFilterCurrentMonth  SinceFilter = "current_month"
+	SinceFilterPreviousMonth SinceFilter = "previous_month"
+)
+
+type ReceiptStatus string
+
+const (
+	ReceiptStatusUploaded            = "uploaded"
+	ReceiptStatusPendingReview       = "pending_review"
+	ReceiptStatusFailedPreprocessing = "failed_preprocessing"
+	ReceiptStatusReviewed            = "reviewed"
+)
+
+type ListFilter struct {
+	Email  string
+	Since  SinceFilter
+	Status ReceiptStatus
+}
+
+func (r *ReceiptRepository) ListReceiptsX(ctx context.Context, filter ListFilter) ([]Receipt, error) {
+	ctx, span := xtrace.StartSpan(ctx, "List Receipts for Current Month")
+	defer span.End()
+
+	andFilters := sq.And{sq.Eq{"r.user_email": filter.Email}}
+
+	switch filter.Since {
+	case SinceFilterCurrentMonth:
+		andFilters = append(andFilters,
+			sq.Expr("receipt_date >= date_trunc('month',current_date)"),
+			sq.Expr("receipt_date < date_trunc('month',current_date) + INTERVAL '1' MONTH"),
+		)
+	case SinceFilterPreviousMonth:
+		andFilters = append(andFilters,
+			sq.Expr("receipt_date >= date_trunc('month',current_date) - INTERVAL '1' MONTH"),
+			sq.Expr("receipt_date < date_trunc('month',current_date)"),
+		)
+	}
+
+	if filter.Status != "" {
+		andFilters = append(andFilters, sq.Expr("receipt_status = ?", filter.Status))
+	}
+
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	query, args, err := psql.
+		Select(
+			"r.id",
+			"r.pending_review",
+			"r.status",
+			"r.user_email",
+			"r.vendor",
+			"r.receipt_date",
+			"(SELECT SUM(amount) AS total_amount FROM expenses WHERE expenses.receipt_id=r.id)",
+		).
+		From("receipts r").
+		Where(andFilters).
+		OrderBy("r.receipt_date DESC").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("compile query: %w", err)
+	}
+
+	var receipts []dbReceipt
+	err = r.dbx.SelectContext(ctx, &receipts, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select receipts: %w", err)
+	}
+
+	var domainReceipts []Receipt
+	for _, receipt := range receipts {
+		domainReceipts = append(domainReceipts, *receipt.MapReceipt())
+	}
+
+	return domainReceipts, nil
 }

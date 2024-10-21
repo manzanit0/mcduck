@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
 	"time"
 
 	"connectrpc.com/connect"
@@ -175,22 +174,40 @@ func (s *receiptsServer) DeleteReceipt(ctx context.Context, req *connect.Request
 func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[receiptsv1.ListReceiptsRequest]) (*connect.Response[receiptsv1.ListReceiptsResponse], error) {
 	userEmail := auth.MustGetUserEmailConnect(ctx)
 
-	var receipts []mcduck.Receipt
-	var err error
-
 	listCtx, span := xtrace.StartSpan(ctx, "List Receipts")
+	defer span.End()
+
+	var since mcduck.SinceFilter
 	switch req.Msg.Since {
 	case receiptsv1.ListReceiptsSince_LIST_RECEIPTS_SINCE_CURRENT_MONTH:
-		receipts, err = s.Receipts.ListReceiptsCurrentMonth(listCtx, userEmail)
+		since = mcduck.SinceFilterCurrentMonth
 	case receiptsv1.ListReceiptsSince_LIST_RECEIPTS_SINCE_PREVIOUS_MONTH:
-		receipts, err = s.Receipts.ListReceiptsPreviousMonth(listCtx, userEmail)
-	case receiptsv1.ListReceiptsSince_LIST_RECEIPTS_SINCE_ALL_TIME, receiptsv1.ListReceiptsSince_LIST_RECEIPTS_SINCE_UNSPECIFIED:
-		receipts, err = s.Receipts.ListReceipts(listCtx, userEmail)
+		since = mcduck.SinceFilterPreviousMonth
 	default:
-		span.SetStatus(codes.Error, "unsupported since value")
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported since value"))
 	}
 
+	var status mcduck.ReceiptStatus
+	switch req.Msg.Status {
+	case receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED:
+		status = mcduck.ReceiptStatusUploaded
+
+	case receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW:
+		status = mcduck.ReceiptStatusUploaded
+
+	case receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING:
+		status = mcduck.ReceiptStatusFailedPreprocessing
+
+	case receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED:
+		status = mcduck.ReceiptStatusReviewed
+
+	default:
+	}
+
+	receipts, err := s.Receipts.ListReceiptsX(listCtx, mcduck.ListFilter{
+		Email:  userEmail,
+		Since:  since,
+		Status: status,
+	})
 	if err != nil {
 		slog.ErrorContext(listCtx, "failed to list receipts", "error", err.Error())
 		span.SetStatus(codes.Error, err.Error())
@@ -199,78 +216,16 @@ func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[
 	}
 
 	span.SetAttributes(attribute.Int("receipts.initial_amount", len(receipts)))
-	span.End()
 
-	_, span = xtrace.StartSpan(ctx, "Filter Receipts")
-	// Note: iterate from the back so we don't have to worry about removed indexes.
-	for i := len(receipts) - 1; i >= 0; i-- {
-		switch req.Msg.Status {
-		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW:
-			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW {
-				delete(receipts, i)
-			}
-		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED:
-			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED {
-				delete(receipts, i)
-			}
-
-		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING:
-			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING {
-				delete(receipts, i)
-			}
-
-		case receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED:
-			if mapReceiptStatus(&receipts[i]) != receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED {
-				delete(receipts, i)
-			}
-		default:
-		}
-	}
-
-	span.SetAttributes(attribute.Int("receipts.after_status_filter", len(receipts)))
-	span.End()
-
-	// Sort the most recent first
-	_, span = xtrace.StartSpan(ctx, "Sort Receipts")
-	sort.Slice(receipts, func(i, j int) bool {
-		return receipts[i].Date.After(receipts[j].Date)
-	})
-	span.End()
-
-	mapCtx, span := xtrace.StartSpan(ctx, "Map Receipts to Response")
-	defer span.End()
-
-	resReceipts := make([]*receiptsv1.Receipt, len(receipts))
-	for i, receipt := range receipts {
-		resReceipts[i] = &receiptsv1.Receipt{}
-		resReceipts[i].Id = uint64(receipt.ID)
-		resReceipts[i].Status = mapReceiptStatus(&receipt)
-		resReceipts[i].Vendor = receipt.Vendor
-		resReceipts[i].Date = timestamppb.New(receipt.Date)
-
-		// FIXME(performance): We should probably do a bulk query before the loop.
-		expenses, err := s.Expenses.ListExpensesForReceipt(mapCtx, uint64(receipt.ID))
-		if err != nil {
-			slog.ErrorContext(mapCtx, "failed to list expenses for receipt", "error", err.Error())
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to list expenses for receipt: %w", err))
-		}
-
-		resReceipts[i].Expenses = make([]*receiptsv1.Expense, len(expenses))
-		for j, e := range expenses {
-			resExp := receiptsv1.Expense{
-				Id:          e.ID,
-				Date:        timestamppb.New(e.Date),
-				Category:    e.Category,
-				Subcategory: e.Subcategory,
-				Description: e.Description,
-				Amount:      uint64(mcduck.ConvertToCents(e.Amount)),
-			}
-
-			resReceipts[i].Expenses[j] = &resExp
-		}
-
+	var resReceipts []*receiptsv1.Receipt
+	for _, r := range receipts {
+		resReceipts = append(resReceipts, &receiptsv1.Receipt{
+			Id:          uint64(r.ID),
+			Status:      mapReceiptStatus(&r),
+			Vendor:      r.Vendor,
+			Date:        timestamppb.New(r.Date),
+			TotalAmount: r.TotalAmount,
+		})
 	}
 
 	res := connect.NewResponse(&receiptsv1.ListReceiptsResponse{Receipts: resReceipts})
@@ -336,16 +291,16 @@ func delete[T any](s []T, i int) []T {
 
 func mapReceiptStatus(r *mcduck.Receipt) receiptsv1.ReceiptStatus {
 	switch r.Status {
-	case "uploaded":
+	case mcduck.ReceiptStatusUploaded:
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED
 
-	case "failed_preprocessing":
+	case mcduck.ReceiptStatusFailedPreprocessing:
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_FAILED_PREPROCESSING
 
-	case "pending_review":
+	case mcduck.ReceiptStatusPendingReview:
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_PENDING_REVIEW
 
-	case "reviewed":
+	case mcduck.ReceiptStatusReviewed:
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_REVIEWED
 	}
 

@@ -89,17 +89,12 @@ func (d *ReceiptsController) ListReceipts(c *gin.Context) {
 			reviewedCount += 1
 		}
 
-		var total float32
-		for _, e := range r.Expenses {
-			total += mcduck.ConvertToDollar(int32(e.Amount))
-		}
-
 		v := ReceiptViewModel{
 			ID:            fmt.Sprint(r.Id),
 			Date:          r.Date.AsTime().Format("2006-01-02"),
 			Vendor:        strings.Title(r.Vendor),
 			PendingReview: pendingReview,
-			TotalAmount:   fmt.Sprintf("%0.2f", total),
+			TotalAmount:   fmt.Sprintf("%0.2f", mcduck.ConvertToDollar(int32(r.TotalAmount))),
 		}
 
 		viewModels = append(viewModels, v)

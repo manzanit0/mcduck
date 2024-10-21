@@ -1,10 +1,24 @@
-import { Expense, Receipt } from "../gen/api/receipts.v1/receipts_pb.ts";
+import {
+  Expense,
+  FullReceipt,
+  Receipt,
+} from "../gen/api/receipts.v1/receipts_pb.ts";
 
 export interface SerializableReceipt {
   id: bigint;
   status: number;
   vendor: string;
   date?: string;
+  totalAmount: bigint;
+  // expenses: SerializableExpense[];
+}
+
+export interface SerializableFullReceipt {
+  id: bigint;
+  status: number;
+  vendor: string;
+  date?: string;
+  totalAmount: bigint;
   expenses: SerializableExpense[];
 }
 
@@ -26,9 +40,22 @@ export function mapReceiptsToSerializable(
       status: r.status,
       vendor: r.vendor,
       date: r.date?.toDate().toISOString(),
-      expenses: mapExpensesToSerializable(r.expenses),
+      totalAmount: r.totalAmount,
     };
   });
+}
+
+export function mapFullReceiptToSerializable(
+  r: FullReceipt,
+): SerializableFullReceipt {
+  return {
+    id: r.id,
+    status: r.status,
+    vendor: r.vendor,
+    date: r.date?.toDate().toISOString(),
+    totalAmount: r.expenses.reduce((acc, ex) => (acc += ex.amount), 0n),
+    expenses: mapExpensesToSerializable(r.expenses),
+  };
 }
 
 export function mapExpensesToSerializable(

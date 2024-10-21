@@ -6,7 +6,7 @@ import { createConnectTransport } from "@connectrpc/connect-web";
 import { ReceiptsService } from "../../gen/api/receipts.v1/receipts_connect.ts";
 import {
   mapExpensesToSerializable,
-  mapReceiptsToSerializable,
+  mapFullReceiptToSerializable,
 } from "../../lib/types.ts";
 
 import { AuthState } from "../../lib/auth.ts";
@@ -29,7 +29,7 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
     },
   );
 
-  const receipt = mapReceiptsToSerializable([res.receipt!])[0];
+  const receipt = mapFullReceiptToSerializable(res.receipt!);
   const encoded = encodeBase64(res.receipt!.file);
 
   let receiptView = (

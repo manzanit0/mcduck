@@ -185,9 +185,7 @@ export default function ReceiptsTable(props: TableProps) {
             accessor: (r) => (
               <FormattedMoney
                 currency="EUR"
-                amount={Number(
-                  r.value.expenses.reduce((acc, ex) => (acc += ex.amount), 0n),
-                )}
+                amount={Number(r.value.totalAmount)}
               />
             ),
           },

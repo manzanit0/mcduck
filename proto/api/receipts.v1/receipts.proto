@@ -67,7 +67,7 @@ message Receipt {
   ReceiptStatus status = 2;
   string vendor = 3;
   google.protobuf.Timestamp date = 4;
-  repeated Expense expenses = 5;
+  uint64 total_amount = 5;
 }
 
 message Expense {

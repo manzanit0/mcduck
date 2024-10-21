@@ -415,9 +415,9 @@ export class Receipt extends Message<Receipt> {
   date?: Timestamp;
 
   /**
-   * @generated from field: repeated api.receipts.v1.Expense expenses = 5;
+   * @generated from field: uint64 total_amount = 5;
    */
-  expenses: Expense[] = [];
+  totalAmount = protoInt64.zero;
 
   constructor(data?: PartialMessage<Receipt>) {
     super();
@@ -431,7 +431,7 @@ export class Receipt extends Message<Receipt> {
     { no: 2, name: "status", kind: "enum", T: proto3.getEnumType(ReceiptStatus) },
     { no: 3, name: "vendor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "date", kind: "message", T: Timestamp },
-    { no: 5, name: "expenses", kind: "message", T: Expense, repeated: true },
+    { no: 5, name: "total_amount", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Receipt {
