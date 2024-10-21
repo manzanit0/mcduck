@@ -18,7 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
-	"github.com/manzanit0/mcduck/internal/client"
 	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/pkg/auth"
@@ -28,7 +27,6 @@ import (
 type ReceiptsController struct {
 	Expenses *expense.Repository
 	Receipts *receipt.Repository
-	Parser   client.ParserClient
 
 	ReceiptsClient receiptsv1connect.ReceiptsServiceClient
 }
