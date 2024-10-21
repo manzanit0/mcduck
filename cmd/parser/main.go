@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -19,7 +18,6 @@ import (
 	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/internal/parser"
 	"github.com/manzanit0/mcduck/pkg/micro"
-	"github.com/manzanit0/mcduck/pkg/openai"
 	"github.com/manzanit0/mcduck/pkg/pubsub"
 	"github.com/manzanit0/mcduck/pkg/xlog"
 	"github.com/manzanit0/mcduck/pkg/xsql"
@@ -83,11 +81,12 @@ func run() error {
 
 	pdfParser := parser.NewTextractParser(config, apiKey)
 	imageParser := parser.NewAIVisionParser(apiKey)
+	smartParser := parser.NewSmartParser(pdfParser, imageParser)
 
 	// NOTE: this is curently not being used. That's ok though. It's handy to
 	// test behaviour manually since the pubsub mechanism relies on proto
 	// encoding.
-	r.POST("/receipt", endpoint(pdfParser, imageParser))
+	r.POST("/receipt", endpoint(smartParser))
 
 	natsURL := micro.MustGetEnv("NATS_URL")
 
@@ -99,7 +98,7 @@ func run() error {
 
 	consumer := func(ctx context.Context) error {
 		slog.InfoContext(ctx, "starting consumer in the background")
-		err = ConsumeMessages(ctx, natsURL, dbx, pdfParser, imageParser)
+		err = ConsumeMessages(ctx, natsURL, dbx, smartParser)
 		if err != nil && err != context.Canceled {
 			return err
 		}
@@ -110,7 +109,7 @@ func run() error {
 	return micro.RunGracefully(r, consumer)
 }
 
-func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) func(c *gin.Context) {
+func endpoint(parser parser.ReceiptParser) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx, span := xtrace.GetSpan(c.Request.Context())
 
@@ -141,7 +140,7 @@ func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) 
 			return
 		}
 
-		receipt, err := parseReceipt(ctx, data, pdfParser, imageParser)
+		receipt, _, err := parser.ExtractReceipt(ctx, data)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			slog.ErrorContext(ctx, "failed to extract receipt", "error", err.Error())
@@ -153,7 +152,7 @@ func endpoint(pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) 
 	}
 }
 
-func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
+func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, parser parser.ReceiptParser) error {
 	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		return fmt.Errorf("connect nats: %w", err)
@@ -176,6 +175,8 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 	const randomPoolCapacity = 1000
 	pool := pond.New(randomWorkerCount, randomPoolCapacity, pond.Context(ctx))
 	defer pool.StopAndWait()
+
+	augmentor := mcduck.AIaugmentor{DB: dbx, Parser: parser}
 
 	for {
 		select {
@@ -205,7 +206,7 @@ func ConsumeMessages(ctx context.Context, natsURL string, dbx *sqlx.DB, pdfParse
 					}
 
 				default:
-					err = processMessage(msg, dbx, pdfParser, imageParser)
+					err = processMessage(msg, &augmentor)
 					if err != nil {
 						slog.ErrorContext(ctx, "failed to process message", "error", err.Error())
 						err = msg.Nak()
@@ -250,7 +251,7 @@ func processFailedMessage(msg *nats.Msg, dbx *sqlx.DB) error {
 	return nil
 }
 
-func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) error {
+func processMessage(msg *nats.Msg, augmentor mcduck.ReceiptAugmentor) error {
 	// FIXME: this trace_id/span_id context propagation isn't working.
 	ctx := xtrace.HydrateContext(context.Background(), msg.Header.Get("trace_id"), msg.Header.Get("span_id"))
 	ctx, span := xtrace.StartSpan(ctx, "Consume ReceiptCreated event")
@@ -262,97 +263,11 @@ func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser,
 		return err
 	}
 
-	data := ev.Receipt.File
-	parsedReceipt, err := parseReceipt(ctx, data, pdfParser, imageParser)
+	err = augmentor.AugmentCreatedReceipt(ctx, ev)
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	parsedTime, err := time.Parse("02/01/2006", parsedReceipt.PurchaseDate)
-	if err != nil {
-		slog.Info("failed to parse receipt date. Defaulting to 'now' ", "error", err.Error())
-		parsedTime = time.Now()
-	}
-
-	txn, err := dbx.BeginTxx(ctx, nil)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-	defer xsql.TxClose(txn)
-
-	receiptRepo := mcduck.NewExpenseRepository(dbx)
-
-	pendingReview := true
-	err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, mcduck.UpdateReceiptRequest{
-		ID:            int64(ev.Receipt.Id),
-		Vendor:        &parsedReceipt.Vendor,
-		Date:          &parsedTime,
-		PendingReview: &pendingReview,
-	})
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	err = mcduck.CreateExpenses(ctx, txn, mcduck.ExpensesBatch{
-		Records: []mcduck.Expense{
-			{
-				Date:        parsedTime,
-				Amount:      float32(parsedReceipt.Amount),
-				Category:    "Receipt Upload",
-				Subcategory: "",
-				UserEmail:   ev.UserEmail,
-				ReceiptID:   ev.Receipt.Id,
-				Description: "This expense has be autogenerated by the system",
-			},
-		},
-		UserEmail: ev.UserEmail,
-	})
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	if err = txn.Commit(); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	return nil
-}
-
-func parseReceipt(ctx context.Context, data []byte, pdfParser parser.ReceiptParser, imageParser parser.ReceiptParser) (receipt *parser.Receipt, err error) {
-	_, span := xtrace.GetSpan(ctx)
-	span.SetAttributes(attribute.Int("file.size", len(data)))
-
-	contentType := http.DetectContentType(data)
-	span.SetAttributes(attribute.String("file.content_type", contentType))
-
-	var openAIRes *openai.Response
-
-	switch contentType {
-	case "application/pdf":
-		receipt, openAIRes, err = pdfParser.ExtractReceipt(ctx, data)
-		if err != nil {
-			return
-		}
-
-	// Default to images
-	default:
-		receipt, openAIRes, err = imageParser.ExtractReceipt(ctx, data)
-		if err != nil {
-			return
-		}
-	}
-
-	// NOTE: currently this is where I'm putting my money for checking responses
-	// and evaluating LLM perf. Not ideal, but good enough for now.
-	marshalled, _ := json.Marshal(receipt)
-	marshalledRes, _ := json.Marshal(openAIRes)
-	span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
-	slog.InfoContext(ctx, "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
-
-	return
 }

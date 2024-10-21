@@ -6,11 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/manzanit0/mcduck/pkg/openai"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -330,4 +333,48 @@ func trimMarkdownWrapper(s string) string {
 	s = strings.TrimPrefix(s, "```json")
 	s = strings.TrimSuffix(s, "```")
 	return s
+}
+
+type SmartParser struct {
+	pdfParser   ReceiptParser
+	imageParser ReceiptParser
+}
+
+func NewSmartParser(pdf, image ReceiptParser) *SmartParser {
+	return &SmartParser{pdfParser: pdf, imageParser: image}
+}
+
+var _ ReceiptParser = (*SmartParser)(nil)
+
+func (s *SmartParser) ExtractReceipt(ctx context.Context, data []byte) (receipt *Receipt, res *openai.Response, err error) {
+	_, span := xtrace.StartSpan(ctx, "Parse Receipt")
+	defer span.End()
+	span.SetAttributes(attribute.Int("file.size", len(data)))
+
+	contentType := http.DetectContentType(data)
+	span.SetAttributes(attribute.String("file.content_type", contentType))
+
+	switch contentType {
+	case "application/pdf":
+		receipt, res, err = s.pdfParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+
+	// Default to images
+	default:
+		receipt, res, err = s.imageParser.ExtractReceipt(ctx, data)
+		if err != nil {
+			return
+		}
+	}
+
+	// NOTE: currently this is where I'm putting my money for checking responses
+	// and evaluating LLM perf. Not ideal, but good enough for now.
+	marshalled, _ := json.Marshal(receipt)
+	marshalledRes, _ := json.Marshal(res)
+	span.SetAttributes(attribute.String("openai.response", string(marshalledRes)))
+	slog.InfoContext(ctx, "chatGPT response", "processed_receipt", marshalled, "open_ai_response", marshalledRes)
+
+	return
 }
