@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
@@ -70,19 +70,19 @@ type Dataset struct {
 }
 
 type DashboardController struct {
-	Expenses   *expense.Repository
-	SampleData []expense.Expense
+	Expenses   *mcduck.ExpenseRepository
+	SampleData []mcduck.Expense
 }
 
 func (d *DashboardController) LiveDemo(c *gin.Context) {
 	expenses := d.SampleData
 
-	expense.SortByDate(expenses)
+	mcduck.SortByDate(expenses)
 
-	mostRecent := expense.FindMostRecentTime(expenses)
-	mostRecentMonthYear := expense.NewMonthYear(mostRecent)
+	mostRecent := mcduck.FindMostRecentTime(expenses)
+	mostRecentMonthYear := mcduck.NewMonthYear(mostRecent)
 
-	categoryTotals := expense.CalculateTotalsPerCategory(expenses)
+	categoryTotals := mcduck.CalculateTotalsPerCategory(expenses)
 	categoryLabels := getSecondClassifier(categoryTotals)
 	categoryChartData := buildChartData(categoryLabels, categoryTotals)
 
@@ -95,7 +95,7 @@ func (d *DashboardController) LiveDemo(c *gin.Context) {
 	var subcategoryCharts []ChartData
 	for cat, subcats := range GroupSubcategoriesByCategory(expenses) {
 		filtered := FilterByCategory(expenses, cat)
-		subcategoryTotals := expense.CalculateTotalsPerSubCategory(filtered)
+		subcategoryTotals := mcduck.CalculateTotalsPerSubCategory(filtered)
 		subcategoryChartData := buildChartData(subcats, subcategoryTotals)
 
 		subcategoryChartData.Title = cat
@@ -111,7 +111,7 @@ func (d *DashboardController) LiveDemo(c *gin.Context) {
 		"Categories":             categoryLabels,
 		"CategoriesChartData":    categoryChartData,
 		"SubcategoriesChartData": subcategoryCharts,
-		"TopCategories":          expense.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
+		"TopCategories":          mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
 		"TotalSpends":            totalSpendsArr,
 	})
 }
@@ -129,22 +129,22 @@ func (d *DashboardController) Dashboard(c *gin.Context) {
 	}
 
 	if len(expenses) == 0 {
-		expenses = []expense.Expense{}
+		expenses = []mcduck.Expense{}
 	}
 
-	expense.SortByDate(expenses)
+	mcduck.SortByDate(expenses)
 
-	mostRecent := expense.FindMostRecentTime(expenses)
-	mostRecentMonthYear := expense.NewMonthYear(mostRecent)
+	mostRecent := mcduck.FindMostRecentTime(expenses)
+	mostRecentMonthYear := mcduck.NewMonthYear(mostRecent)
 
-	categoryTotals := expense.CalculateTotalsPerCategory(expenses)
+	categoryTotals := mcduck.CalculateTotalsPerCategory(expenses)
 	categoryLabels := getSecondClassifier(categoryTotals)
 	categoryChartData := buildChartData(categoryLabels, categoryTotals)
 
 	var subcategoryCharts []ChartData
 	for cat, subcats := range GroupSubcategoriesByCategory(expenses) {
 		filtered := FilterByCategory(expenses, cat)
-		subcategoryTotals := expense.CalculateTotalsPerSubCategory(filtered)
+		subcategoryTotals := mcduck.CalculateTotalsPerSubCategory(filtered)
 		subcategoryChartData := buildChartData(subcats, subcategoryTotals)
 
 		subcategoryChartData.Title = cat
@@ -160,7 +160,7 @@ func (d *DashboardController) Dashboard(c *gin.Context) {
 		"Categories":             categoryLabels,
 		"CategoriesChartData":    categoryChartData,
 		"SubcategoriesChartData": subcategoryCharts,
-		"TopCategories":          expense.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
+		"TopCategories":          mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
 		"TotalSpends":            totalSpendsArr,
 		"User":                   user,
 	})
@@ -173,8 +173,8 @@ type MonthlySpend struct {
 	Amount    string
 }
 
-func TotalSpendLastThreeMonths(expenses []expense.Expense) []*MonthlySpend {
-	latest := expense.FindMostRecentTime(expenses)
+func TotalSpendLastThreeMonths(expenses []mcduck.Expense) []*MonthlySpend {
+	latest := mcduck.FindMostRecentTime(expenses)
 	totalSpends := map[string]*MonthlySpend{}
 	for i := range expenses {
 		if isOlderThanLastThreeMonths(expenses[i].Date, latest) {
@@ -218,8 +218,8 @@ func isOlderThanLastThreeMonths(t time.Time, latest time.Time) bool {
 	return t.Before(beginningOf3MonthsAgo)
 }
 
-func FilterByCategory(list []expense.Expense, cat string) []expense.Expense {
-	var filtered []expense.Expense
+func FilterByCategory(list []mcduck.Expense, cat string) []mcduck.Expense {
+	var filtered []mcduck.Expense
 	for i := range list {
 		if list[i].Category == cat {
 			filtered = append(filtered, list[i])
@@ -229,7 +229,7 @@ func FilterByCategory(list []expense.Expense, cat string) []expense.Expense {
 	return filtered
 }
 
-func GroupSubcategoriesByCategory(list []expense.Expense) map[string][]string {
+func GroupSubcategoriesByCategory(list []mcduck.Expense) map[string][]string {
 	m := map[string]map[string]bool{}
 	for _, e := range list {
 		if _, ok := m[e.Category]; !ok {
@@ -327,7 +327,7 @@ func (d *DashboardController) UploadExpenses(c *gin.Context) {
 	// If the user is logged in, save those upload expenses
 	user := auth.GetUserEmail(c)
 	if user != "" {
-		err = d.Expenses.CreateExpenses(c.Request.Context(), expense.ExpensesBatch{UserEmail: user, Records: expenses})
+		err = d.Expenses.CreateExpenses(c.Request.Context(), mcduck.ExpensesBatch{UserEmail: user, Records: expenses})
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			slog.ErrorContext(ctx, "failed create expenses", "error", err.Error())
@@ -336,16 +336,16 @@ func (d *DashboardController) UploadExpenses(c *gin.Context) {
 		}
 	}
 
-	expense.SortByDate(expenses)
+	mcduck.SortByDate(expenses)
 
-	mostRecent := expense.FindMostRecentTime(expenses)
-	mostRecentMonthYear := expense.NewMonthYear(mostRecent)
+	mostRecent := mcduck.FindMostRecentTime(expenses)
+	mostRecentMonthYear := mcduck.NewMonthYear(mostRecent)
 
-	categoryTotals := expense.CalculateTotalsPerCategory(expenses)
+	categoryTotals := mcduck.CalculateTotalsPerCategory(expenses)
 	categoryLabels := getSecondClassifier(categoryTotals)
 	categoryChartData := buildChartData(categoryLabels, categoryTotals)
 
-	subcategoryTotals := expense.CalculateTotalsPerSubCategory(expenses)
+	subcategoryTotals := mcduck.CalculateTotalsPerSubCategory(expenses)
 	subcategoryLabels := getSecondClassifier(subcategoryTotals)
 	subcategoryChartData := buildChartData(subcategoryLabels, subcategoryTotals)
 
@@ -356,7 +356,7 @@ func (d *DashboardController) UploadExpenses(c *gin.Context) {
 		"CategoriesChartData":    categoryChartData,
 		"SubCategories":          subcategoryLabels,
 		"SubCategoriesChartData": subcategoryChartData,
-		"TopCategories":          expense.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
+		"TopCategories":          mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
 		"User":                   user,
 	})
 }
@@ -377,7 +377,7 @@ func getSecondClassifier(calculations map[string]map[string]float32) []string {
 	return classifierSlice
 }
 
-func readExpensesFromCSV(filename string) ([]expense.Expense, error) {
+func readExpensesFromCSV(filename string) ([]mcduck.Expense, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -385,5 +385,5 @@ func readExpensesFromCSV(filename string) ([]expense.Expense, error) {
 
 	defer f.Close()
 
-	return expense.FromCSV(f)
+	return mcduck.FromCSV(f)
 }

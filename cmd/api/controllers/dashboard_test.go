@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	api "github.com/manzanit0/mcduck/cmd/api/controllers"
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 )
 
 func TestGroupSubcategoriesByCategory(t *testing.T) {
 	testCases := []struct {
-		expenses []expense.Expense
+		expenses []mcduck.Expense
 		result   map[string][]string
 	}{
 		{
-			expenses: []expense.Expense{
+			expenses: []mcduck.Expense{
 				{Category: "a", Subcategory: "1"},
 				{Category: "a", Subcategory: "2"},
 				{Category: "b", Subcategory: "3"},

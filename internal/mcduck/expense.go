@@ -1,4 +1,4 @@
-package expense
+package mcduck
 
 import (
 	"bytes"
@@ -229,12 +229,12 @@ func FromCSV(r io.Reader) ([]Expense, error) {
 	return expenses, nil
 }
 
-type Repository struct {
+type ExpenseRepository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{db: db}
+func NewExpenseRepository(db *sqlx.DB) *ExpenseRepository {
+	return &ExpenseRepository{db: db}
 }
 
 type ExpensesBatch struct {
@@ -242,7 +242,7 @@ type ExpensesBatch struct {
 	UserEmail string
 }
 
-func (r *Repository) CreateExpenses(ctx context.Context, e ExpensesBatch) error {
+func (r *ExpenseRepository) CreateExpenses(ctx context.Context, e ExpensesBatch) error {
 	return CreateExpenses(ctx, r.db, e)
 }
 
@@ -291,7 +291,7 @@ func CreateExpenses(ctx context.Context, tx QueryExecutor, e ExpensesBatch) erro
 	return nil
 }
 
-func (r *Repository) FindExpense(ctx context.Context, id int64) (*Expense, error) {
+func (r *ExpenseRepository) FindExpense(ctx context.Context, id int64) (*Expense, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Find Expense by ID")
 	defer span.End()
 
@@ -327,7 +327,7 @@ type UpdateExpenseRequest struct {
 	ReceiptID   *uint64
 }
 
-func (r *Repository) UpdateExpense(ctx context.Context, e UpdateExpenseRequest) error {
+func (r *ExpenseRepository) UpdateExpense(ctx context.Context, e UpdateExpenseRequest) error {
 	ctx, span := xtrace.StartSpan(ctx, "Update Expense")
 	defer span.End()
 
@@ -391,7 +391,7 @@ type CreateExpenseRequest struct {
 	ReceiptID *uint64
 }
 
-func (r *Repository) CreateExpense(ctx context.Context, e CreateExpenseRequest) (int64, error) {
+func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRequest) (int64, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Create Expense")
 	defer span.End()
 
@@ -420,7 +420,7 @@ func (r *Repository) CreateExpense(ctx context.Context, e CreateExpenseRequest) 
 	return record.ID, nil
 }
 
-func (r *Repository) DeleteExpense(ctx context.Context, id int64) error {
+func (r *ExpenseRepository) DeleteExpense(ctx context.Context, id int64) error {
 	ctx, span := xtrace.StartSpan(ctx, "Delete Expense")
 	defer span.End()
 
@@ -439,7 +439,7 @@ func (r *Repository) DeleteExpense(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *Repository) ListExpenses(ctx context.Context, email string) ([]Expense, error) {
+func (r *ExpenseRepository) ListExpenses(ctx context.Context, email string) ([]Expense, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Expenses for User")
 	defer span.End()
 
@@ -457,7 +457,7 @@ func (r *Repository) ListExpenses(ctx context.Context, email string) ([]Expense,
 	return expensesList, nil
 }
 
-func (r *Repository) ListExpensesForReceipt(ctx context.Context, receiptID uint64) ([]Expense, error) {
+func (r *ExpenseRepository) ListExpensesForReceipt(ctx context.Context, receiptID uint64) ([]Expense, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Expenses for Receipt")
 	defer span.End()
 

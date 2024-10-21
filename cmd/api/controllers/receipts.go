@@ -18,15 +18,14 @@ import (
 	"github.com/gin-gonic/gin"
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
-	"github.com/manzanit0/mcduck/internal/expense"
-	"github.com/manzanit0/mcduck/internal/receipt"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
 type ReceiptsController struct {
-	Expenses *expense.Repository
-	Receipts *receipt.Repository
+	Expenses *mcduck.ExpenseRepository
+	Receipts *mcduck.ReceiptRepository
 
 	ReceiptsClient receiptsv1connect.ReceiptsServiceClient
 }
@@ -92,7 +91,7 @@ func (d *ReceiptsController) ListReceipts(c *gin.Context) {
 
 		var total float32
 		for _, e := range r.Expenses {
-			total += expense.ConvertToDollar(int32(e.Amount))
+			total += mcduck.ConvertToDollar(int32(e.Amount))
 		}
 
 		v := ReceiptViewModel{
@@ -160,7 +159,7 @@ func (d *ReceiptsController) UpdateReceipt(c *gin.Context) {
 		date = &d
 	}
 
-	err = d.Receipts.UpdateReceipt(ctx, receipt.UpdateReceiptRequest{
+	err = d.Receipts.UpdateReceipt(ctx, mcduck.UpdateReceiptRequest{
 		ID:            i,
 		Vendor:        payload.Vendor,
 		PendingReview: pendingReview,
@@ -343,7 +342,7 @@ type ReceiptViewModel struct {
 	TotalAmount   string
 }
 
-func ToSingleReceiptViewModel(r *receipt.Receipt) ReceiptViewModel {
+func ToSingleReceiptViewModel(r *mcduck.Receipt) ReceiptViewModel {
 	pendingReview := "No"
 	if r.PendingReview {
 		pendingReview = "Yes"

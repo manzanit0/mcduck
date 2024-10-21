@@ -8,8 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/manzanit0/mcduck/internal/expense"
-	"github.com/manzanit0/mcduck/internal/receipt"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 )
 
@@ -37,7 +36,7 @@ func ForceAuthentication(c *gin.Context) {
 
 // ExpenseOwnershipWall validates that the expense ID in the URL parameter
 // belongs to the requesting user, otherwise abouts with Unauthorised status.
-func ExpenseOwnershipWall(repo *expense.Repository) gin.HandlerFunc {
+func ExpenseOwnershipWall(repo *mcduck.ExpenseRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		i, err := strconv.ParseInt(id, 10, 64)
@@ -61,7 +60,7 @@ func ExpenseOwnershipWall(repo *expense.Repository) gin.HandlerFunc {
 	}
 }
 
-func ReceiptOwnershipWall(repo *receipt.Repository) gin.HandlerFunc {
+func ReceiptOwnershipWall(repo *mcduck.ReceiptRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		i, err := strconv.ParseUint(id, 10, 64)

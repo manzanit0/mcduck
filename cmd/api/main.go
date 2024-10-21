@@ -14,8 +14,7 @@ import (
 	"github.com/manzanit0/mcduck/cmd/api/controllers"
 	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
-	"github.com/manzanit0/mcduck/internal/expense"
-	"github.com/manzanit0/mcduck/internal/receipt"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/micro"
 	"github.com/manzanit0/mcduck/pkg/tgram"
@@ -73,11 +72,11 @@ func run() error {
 		AuthClient:      authClient,
 	}
 
-	expenseRepository := expense.NewRepository(db)
+	expenseRepository := mcduck.NewExpenseRepository(db)
 	expensesController := controllers.ExpensesController{Expenses: expenseRepository}
 
 	receiptsClient := receiptsv1connect.NewReceiptsServiceClient(xhttp.NewClient(), micro.MustGetEnv("PRIVATE_DOTS_HOST"))
-	receiptsRepository := receipt.NewRepository(db)
+	receiptsRepository := mcduck.NewReceiptRepository(db)
 	receiptsController := controllers.ReceiptsController{
 		Expenses:       expenseRepository,
 		Receipts:       receiptsRepository,
@@ -145,11 +144,11 @@ func run() error {
 	return svc.Run()
 }
 
-func readSampleData() ([]expense.Expense, error) {
+func readSampleData() ([]mcduck.Expense, error) {
 	b, err := sampleData.ReadFile("sample_data.csv")
 	if err != nil {
 		return nil, err
 	}
 
-	return expense.FromCSV(bytes.NewReader(b))
+	return mcduck.FromCSV(bytes.NewReader(b))
 }

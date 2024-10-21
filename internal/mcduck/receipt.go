@@ -1,4 +1,4 @@
-package receipt
+package mcduck
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
-	"github.com/manzanit0/mcduck/internal/expense"
 	"github.com/manzanit0/mcduck/pkg/xsql"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
@@ -56,12 +55,12 @@ func (r *dbReceipt) MapReceipt() *Receipt {
 	}
 }
 
-type Repository struct {
+type ReceiptRepository struct {
 	dbx *sqlx.DB
 }
 
-func NewRepository(dbx *sqlx.DB) *Repository {
-	return &Repository{dbx: dbx}
+func NewReceiptRepository(dbx *sqlx.DB) *ReceiptRepository {
+	return &ReceiptRepository{dbx: dbx}
 }
 
 type CreateReceiptRequest struct {
@@ -73,7 +72,7 @@ type CreateReceiptRequest struct {
 	Email       string
 }
 
-func (r *Repository) CreateReceipt(ctx context.Context, input CreateReceiptRequest) (*Receipt, error) {
+func (r *ReceiptRepository) CreateReceipt(ctx context.Context, input CreateReceiptRequest) (*Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Create Receipt")
 	defer span.End()
 
@@ -108,9 +107,9 @@ func (r *Repository) CreateReceipt(ctx context.Context, input CreateReceiptReque
 	}
 
 	if input.Amount > 0 {
-		e := expense.ExpensesBatch{
+		e := ExpensesBatch{
 			UserEmail: input.Email,
-			Records: []expense.Expense{{
+			Records: []Expense{{
 				ReceiptID:   uint64(record.ID),
 				Date:        input.Date,
 				Amount:      float32(input.Amount),
@@ -120,7 +119,7 @@ func (r *Repository) CreateReceipt(ctx context.Context, input CreateReceiptReque
 			}},
 		}
 
-		err = expense.CreateExpenses(ctx, txn, e)
+		err = CreateExpenses(ctx, txn, e)
 		if err != nil {
 			return nil, fmt.Errorf("unable to insert expenses: %w", err)
 		}
@@ -141,7 +140,7 @@ type UpdateReceiptRequest struct {
 	Date          *time.Time
 }
 
-func (r *Repository) UpdateReceipt(ctx context.Context, e UpdateReceiptRequest) error {
+func (r *ReceiptRepository) UpdateReceipt(ctx context.Context, e UpdateReceiptRequest) error {
 	ctx, span := xtrace.StartSpan(ctx, "Update Receipt")
 	defer span.End()
 
@@ -214,7 +213,7 @@ func (r *Repository) UpdateReceipt(ctx context.Context, e UpdateReceiptRequest) 
 	return nil
 }
 
-func (r *Repository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e UpdateReceiptRequest) error {
+func (r *ExpenseRepository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e UpdateReceiptRequest) error {
 	ctx, span := xtrace.StartSpan(ctx, "Update Receipt")
 	defer span.End()
 
@@ -275,7 +274,7 @@ func (r *Repository) UpdateReceiptWithTxn(ctx context.Context, txn *sqlx.Tx, e U
 	return nil
 }
 
-func (r *Repository) MarkFailedToProcess(ctx context.Context, receiptID uint64) error {
+func (r *ReceiptRepository) MarkFailedToProcess(ctx context.Context, receiptID uint64) error {
 	ctx, span := xtrace.StartSpan(ctx, "Update Receipt")
 	defer span.End()
 
@@ -299,7 +298,7 @@ func (r *Repository) MarkFailedToProcess(ctx context.Context, receiptID uint64) 
 	return nil
 }
 
-func (r *Repository) ListReceipts(ctx context.Context, email string) ([]Receipt, error) {
+func (r *ReceiptRepository) ListReceipts(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts")
 	defer span.End()
 
@@ -328,7 +327,7 @@ func (r *Repository) ListReceipts(ctx context.Context, email string) ([]Receipt,
 	return domainReceipts, nil
 }
 
-func (r *Repository) ListReceiptsCurrentMonth(ctx context.Context, email string) ([]Receipt, error) {
+func (r *ReceiptRepository) ListReceiptsCurrentMonth(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts for Current Month")
 	defer span.End()
 
@@ -361,7 +360,7 @@ func (r *Repository) ListReceiptsCurrentMonth(ctx context.Context, email string)
 	return domainReceipts, nil
 }
 
-func (r *Repository) ListReceiptsPreviousMonth(ctx context.Context, email string) ([]Receipt, error) {
+func (r *ReceiptRepository) ListReceiptsPreviousMonth(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts for Previous Month")
 	defer span.End()
 
@@ -394,7 +393,7 @@ func (r *Repository) ListReceiptsPreviousMonth(ctx context.Context, email string
 	return domainReceipts, nil
 }
 
-func (r *Repository) ListReceiptsPendingReview(ctx context.Context, email string) ([]Receipt, error) {
+func (r *ReceiptRepository) ListReceiptsPendingReview(ctx context.Context, email string) ([]Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "List Receipts Pending Review")
 	defer span.End()
 
@@ -426,7 +425,7 @@ func (r *Repository) ListReceiptsPendingReview(ctx context.Context, email string
 	return domainReceipts, nil
 }
 
-func (r *Repository) GetReceipt(ctx context.Context, receiptID uint64) (*Receipt, error) {
+func (r *ReceiptRepository) GetReceipt(ctx context.Context, receiptID uint64) (*Receipt, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Get Single Receipt")
 	defer span.End()
 
@@ -450,7 +449,7 @@ func (r *Repository) GetReceipt(ctx context.Context, receiptID uint64) (*Receipt
 	return receipt.MapReceipt(), nil
 }
 
-func (r *Repository) GetReceiptImage(ctx context.Context, receiptID uint64) ([]byte, error) {
+func (r *ReceiptRepository) GetReceiptImage(ctx context.Context, receiptID uint64) ([]byte, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Get Receipt Image")
 	defer span.End()
 
@@ -474,7 +473,7 @@ func (r *Repository) GetReceiptImage(ctx context.Context, receiptID uint64) ([]b
 	return receipt.Image, nil
 }
 
-func (r *Repository) DeleteReceipt(ctx context.Context, id int64) error {
+func (r *ReceiptRepository) DeleteReceipt(ctx context.Context, id int64) error {
 	ctx, span := xtrace.StartSpan(ctx, "Delete Receipt")
 	defer span.End()
 

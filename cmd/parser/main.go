@@ -16,9 +16,8 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	receiptsevv1 "github.com/manzanit0/mcduck/gen/events/receipts.v1"
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/internal/parser"
-	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/pkg/micro"
 	"github.com/manzanit0/mcduck/pkg/openai"
 	"github.com/manzanit0/mcduck/pkg/pubsub"
@@ -241,7 +240,7 @@ func processFailedMessage(msg *nats.Msg, dbx *sqlx.DB) error {
 		return err
 	}
 
-	receiptRepo := receipt.NewRepository(dbx)
+	receiptRepo := mcduck.NewReceiptRepository(dbx)
 	err = receiptRepo.MarkFailedToProcess(ctx, ev.Receipt.Id)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -283,10 +282,10 @@ func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser,
 	}
 	defer xsql.TxClose(txn)
 
-	receiptRepo := receipt.NewRepository(dbx)
+	receiptRepo := mcduck.NewExpenseRepository(dbx)
 
 	pendingReview := true
-	err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, receipt.UpdateReceiptRequest{
+	err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, mcduck.UpdateReceiptRequest{
 		ID:            int64(ev.Receipt.Id),
 		Vendor:        &parsedReceipt.Vendor,
 		Date:          &parsedTime,
@@ -297,8 +296,8 @@ func processMessage(msg *nats.Msg, dbx *sqlx.DB, pdfParser parser.ReceiptParser,
 		return err
 	}
 
-	err = expense.CreateExpenses(ctx, txn, expense.ExpensesBatch{
-		Records: []expense.Expense{
+	err = mcduck.CreateExpenses(ctx, txn, mcduck.ExpensesBatch{
+		Records: []mcduck.Expense{
 			{
 				Date:        parsedTime,
 				Amount:      float32(parsedReceipt.Amount),

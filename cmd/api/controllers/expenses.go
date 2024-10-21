@@ -12,13 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
 type ExpensesController struct {
-	Expenses *expense.Repository
+	Expenses *mcduck.ExpenseRepository
 }
 
 type ExpenseViewModel struct {
@@ -31,7 +31,7 @@ type ExpenseViewModel struct {
 	ReceiptID   uint64
 }
 
-func MapExpenses(expenses []expense.Expense) (models []ExpenseViewModel) {
+func MapExpenses(expenses []mcduck.Expense) (models []ExpenseViewModel) {
 	for _, e := range expenses {
 		models = append(models, ExpenseViewModel{
 			ID:          fmt.Sprint(e.ID),
@@ -112,7 +112,7 @@ func (d *ExpensesController) UpdateExpense(c *gin.Context) {
 		date = &d
 	}
 
-	err = d.Expenses.UpdateExpense(ctx, expense.UpdateExpenseRequest{
+	err = d.Expenses.UpdateExpense(ctx, mcduck.UpdateExpenseRequest{
 		ID:          i,
 		Date:        date,
 		Amount:      payload.Amount,
@@ -161,7 +161,7 @@ func (d *ExpensesController) CreateExpense(c *gin.Context) {
 		return
 	}
 
-	expenseID, err := d.Expenses.CreateExpense(ctx, expense.CreateExpenseRequest{
+	expenseID, err := d.Expenses.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 		UserEmail: auth.GetUserEmail(c),
 		Date:      date,
 		Amount:    payload.Amount,
@@ -218,7 +218,7 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 	}
 
 	var total float32
-	expenses := []*expense.Expense{}
+	expenses := []*mcduck.Expense{}
 	for _, id := range payload.ExpenseIDs {
 		expense, err := d.Expenses.FindExpense(ctx, int64(id))
 		if err != nil {
@@ -242,7 +242,7 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 	}
 
 	// FIXME: create and delete should be done atomically
-	expenseID, err := d.Expenses.CreateExpense(ctx, expense.CreateExpenseRequest{
+	expenseID, err := d.Expenses.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 		UserEmail: auth.GetUserEmail(c),
 		Date:      time.Now(),
 		Amount:    total,

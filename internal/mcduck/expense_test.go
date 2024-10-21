@@ -1,4 +1,4 @@
-package expense_test
+package mcduck_test
 
 import (
 	"bytes"
@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 )
 
 func TestCalculateTotalsPerCategory(t *testing.T) {
 	testCases := []struct {
-		expenses []expense.Expense
+		expenses []mcduck.Expense
 		result   map[string]map[string]float32
 	}{
 		{
-			expenses: []expense.Expense{
+			expenses: []mcduck.Expense{
 				{Date: time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1},
 				{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1},
 				{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "b", Amount: 1},
@@ -29,7 +29,7 @@ func TestCalculateTotalsPerCategory(t *testing.T) {
 			},
 		},
 		{
-			expenses: []expense.Expense{
+			expenses: []mcduck.Expense{
 				{Date: time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1.3},
 				{Date: time.Date(2008, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1.2},
 			},
@@ -41,7 +41,7 @@ func TestCalculateTotalsPerCategory(t *testing.T) {
 	}
 	for x, tC := range testCases {
 		t.Run(fmt.Sprintf("case %d", x), func(t *testing.T) {
-			totals := expense.CalculateTotalsPerCategory(tC.expenses)
+			totals := mcduck.CalculateTotalsPerCategory(tC.expenses)
 			if len(totals) != len(tC.result) {
 				t.Fatalf("expected %d results, got %d", len(tC.result), len(totals))
 			}
@@ -58,7 +58,7 @@ func TestCalculateTotalsPerCategory(t *testing.T) {
 }
 
 func TestCalculateMonthOverMonthTotals(t *testing.T) {
-	input := []expense.Expense{
+	input := []mcduck.Expense{
 		{Date: time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1},
 		{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1},
 		{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "b", Amount: 2},
@@ -74,7 +74,7 @@ func TestCalculateMonthOverMonthTotals(t *testing.T) {
 		"d": {"2006-01": 0, "2006-02": 0, "2006-03": 4},
 	}
 
-	got := expense.CalculateMonthOverMonthTotals(input)
+	got := mcduck.CalculateMonthOverMonthTotals(input)
 
 	if len(want) != len(got) {
 		t.Fatalf("expected %d results, got %d", len(want), len(got))
@@ -88,30 +88,31 @@ func TestCalculateMonthOverMonthTotals(t *testing.T) {
 		}
 	}
 }
+
 func TestGetTop3ExpenseCategories(t *testing.T) {
 	testCases := []struct {
 		desc      string
-		input     []expense.Expense
+		input     []mcduck.Expense
 		monthYear string
-		output    []expense.CategoryAggregate
+		output    []mcduck.CategoryAggregate
 	}{
 		{
 			desc:      "when less than three categories are provided, then they're all returned",
-			monthYear: expense.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []expense.Expense{
+			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
+			input: []mcduck.Expense{
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 3.3},
 			},
-			output: []expense.CategoryAggregate{
+			output: []mcduck.CategoryAggregate{
 				{Category: "bar", MonthYear: "2008-02", TotalAmount: 3.3},
 				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.2},
 			},
 		},
 		{
 			desc:      "when more than three categories are provided, then only the top three are returned",
-			monthYear: expense.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []expense.Expense{
+			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
+			input: []mcduck.Expense{
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 3.3},
@@ -120,7 +121,7 @@ func TestGetTop3ExpenseCategories(t *testing.T) {
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 5.5},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "nope", Amount: 0.5},
 			},
-			output: []expense.CategoryAggregate{
+			output: []mcduck.CategoryAggregate{
 				{Category: "baz", MonthYear: "2008-02", TotalAmount: 10.92},
 				{Category: "bar", MonthYear: "2008-02", TotalAmount: 3.3},
 				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.2},
@@ -128,30 +129,30 @@ func TestGetTop3ExpenseCategories(t *testing.T) {
 		},
 		{
 			desc:      "when input expenses contain more than 2 decimals, then aggregates returned only 2 decimals",
-			monthYear: expense.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []expense.Expense{
+			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
+			input: []mcduck.Expense{
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.11111111119},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.11111111119},
 			},
-			output: []expense.CategoryAggregate{
+			output: []mcduck.CategoryAggregate{
 				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.22},
 			},
 		},
 		{
 			desc:      "when input expenses contain more than two decimals, then aggregates apply rounding as oposed to truncation",
-			monthYear: expense.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []expense.Expense{
+			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
+			input: []mcduck.Expense{
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.49999},
 				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.49999},
 			},
-			output: []expense.CategoryAggregate{
+			output: []mcduck.CategoryAggregate{
 				{Category: "foo", MonthYear: "2008-02", TotalAmount: 3},
 			},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			aggregate := expense.GetTop3ExpenseCategories(tC.input, tC.monthYear)
+			aggregate := mcduck.GetTop3ExpenseCategories(tC.input, tC.monthYear)
 			for i := range aggregate {
 				if aggregate[i].Category != tC.output[i].Category {
 					t.Error("unexpected category", aggregate[i].Category, "expected", tC.output[i].Category)
@@ -177,7 +178,7 @@ func almostEqual(a, b float32) bool {
 
 func TestFromCSV(t *testing.T) {
 	t.Run("when the file is empty, an error is returned", func(t *testing.T) {
-		expenses, err := expense.FromCSV(bytes.NewBufferString(""))
+		expenses, err := mcduck.FromCSV(bytes.NewBufferString(""))
 
 		if err == nil {
 			t.Fatalf("expected an error, got nil")
@@ -189,12 +190,11 @@ func TestFromCSV(t *testing.T) {
 	})
 
 	t.Run("when the column separator is a semi-colon, the expenses are parsed successfully", func(t *testing.T) {
-		expenses, err := expense.FromCSV(bytes.NewBufferString(`
+		expenses, err := mcduck.FromCSV(bytes.NewBufferString(`
 date;amount;category;subcategory
 2022-04-02;2.82;food;meat
 2022-04-02;8.22;transport;gasoline
 `))
-
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -239,12 +239,11 @@ date;amount;category;subcategory
 	})
 
 	t.Run("when the column separator is a comma, the expenses are parsed successfully", func(t *testing.T) {
-		expenses, err := expense.FromCSV(bytes.NewBufferString(`
+		expenses, err := mcduck.FromCSV(bytes.NewBufferString(`
 date,amount,category,subcategory
 2022-04-02,2.82,food,meat
 2022-04-02,8.22,transport,gasoline
 `))
-
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -289,7 +288,7 @@ date,amount,category,subcategory
 	})
 
 	t.Run("when the column separator is neither a comma nor a semi-colon, an error is returned", func(t *testing.T) {
-		expenses, err := expense.FromCSV(bytes.NewBufferString(`
+		expenses, err := mcduck.FromCSV(bytes.NewBufferString(`
 date?amount?category?subcategory
 2022-04-02?2.82?food?meat
 2022-04-02?8.22?transport?gasoline
@@ -305,12 +304,11 @@ date?amount?category?subcategory
 	})
 
 	t.Run("when the amounts floating point separator is a comma, the expenses are parsed succesfully", func(t *testing.T) {
-		expenses, err := expense.FromCSV(bytes.NewBufferString(`
+		expenses, err := mcduck.FromCSV(bytes.NewBufferString(`
 date;amount;category;subcategory
 2022-04-02;2,82;food;meat
 2022-04-02;8,22;transport;gasoline
 `))
-
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

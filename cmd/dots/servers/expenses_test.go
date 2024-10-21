@@ -8,9 +8,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
 	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/internal/pgtest"
-	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/internal/users"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -60,8 +59,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -100,8 +99,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -140,8 +139,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -180,8 +179,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -220,8 +219,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -229,8 +228,8 @@ func TestUpdateExpense(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		receiptsRepo := receipt.NewRepository(db)
-		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+		receiptsRepo := mcduck.NewReceiptRepository(db)
+		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 			Amount: 0,
 			Image:  []byte{0x0a, 0x16, 0x61, 0x70, 0x69},
 			Email:  userEmail,
@@ -268,8 +267,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -277,8 +276,8 @@ func TestUpdateExpense(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		receiptsRepo := receipt.NewRepository(db)
-		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+		receiptsRepo := mcduck.NewReceiptRepository(db)
+		createdReceipt, err := receiptsRepo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 			Amount: 0,
 			Image:  []byte{0x0a, 0x16, 0x61, 0x70, 0x69},
 			Email:  userEmail,
@@ -350,8 +349,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,
@@ -391,8 +390,8 @@ func TestUpdateExpense(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		repo := expense.NewRepository(db)
-		expenseID, err := repo.CreateExpense(ctx, expense.CreateExpenseRequest{
+		repo := mcduck.NewExpenseRepository(db)
+		expenseID, err := repo.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 			UserEmail: userEmail,
 			Date:      time.Now(),
 			Amount:    12,

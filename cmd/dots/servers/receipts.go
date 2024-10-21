@@ -14,8 +14,7 @@ import (
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	receiptsevv1 "github.com/manzanit0/mcduck/gen/events/receipts.v1"
-	"github.com/manzanit0/mcduck/internal/expense"
-	"github.com/manzanit0/mcduck/internal/receipt"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/pubsub"
 	"github.com/manzanit0/mcduck/pkg/tgram"
@@ -30,8 +29,8 @@ import (
 
 type receiptsServer struct {
 	Telegram tgram.Client
-	Receipts *receipt.Repository
-	Expenses *expense.Repository
+	Receipts *mcduck.ReceiptRepository
+	Expenses *mcduck.ExpenseRepository
 	js       jetstream.JetStream
 }
 
@@ -40,8 +39,8 @@ var _ receiptsv1connect.ReceiptsServiceClient = &receiptsServer{}
 func NewReceiptsServer(db *sqlx.DB, t tgram.Client, js jetstream.JetStream) receiptsv1connect.ReceiptsServiceClient {
 	return &receiptsServer{
 		Telegram: t,
-		Receipts: receipt.NewRepository(db),
-		Expenses: expense.NewRepository(db),
+		Receipts: mcduck.NewReceiptRepository(db),
+		Expenses: mcduck.NewExpenseRepository(db),
 		js:       js,
 	}
 }
@@ -51,7 +50,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 
 	email := auth.MustGetUserEmailConnect(ctx)
 
-	ch := make(chan *receipt.Receipt, len(req.Msg.ReceiptFiles))
+	ch := make(chan *mcduck.Receipt, len(req.Msg.ReceiptFiles))
 
 	g, ctx := errgroup.WithContext(ctx)
 	for i, file := range req.Msg.ReceiptFiles {
@@ -60,7 +59,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 			defer span.End()
 
 			// TODO: we should do a batch insert to make it an all or nothing.
-			created, err := s.Receipts.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+			created, err := s.Receipts.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 				Image: file,
 				Email: email,
 			})
@@ -140,7 +139,7 @@ func (s *receiptsServer) UpdateReceipt(ctx context.Context, req *connect.Request
 		date = &d
 	}
 
-	dto := receipt.UpdateReceiptRequest{
+	dto := mcduck.UpdateReceiptRequest{
 		ID:            int64(req.Msg.Id),
 		Vendor:        req.Msg.Vendor,
 		PendingReview: req.Msg.PendingReview,
@@ -176,7 +175,7 @@ func (s *receiptsServer) DeleteReceipt(ctx context.Context, req *connect.Request
 func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[receiptsv1.ListReceiptsRequest]) (*connect.Response[receiptsv1.ListReceiptsResponse], error) {
 	userEmail := auth.MustGetUserEmailConnect(ctx)
 
-	var receipts []receipt.Receipt
+	var receipts []mcduck.Receipt
 	var err error
 
 	listCtx, span := xtrace.StartSpan(ctx, "List Receipts")
@@ -266,7 +265,7 @@ func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[
 				Category:    e.Category,
 				Subcategory: e.Subcategory,
 				Description: e.Description,
-				Amount:      uint64(expense.ConvertToCents(e.Amount)),
+				Amount:      uint64(mcduck.ConvertToCents(e.Amount)),
 			}
 
 			resReceipts[i].Expenses[j] = &resExp
@@ -312,7 +311,7 @@ func (s *receiptsServer) GetReceipt(ctx context.Context, req *connect.Request[re
 	return res, nil
 }
 
-func mapExpenses(expenses []expense.Expense) []*receiptsv1.Expense {
+func mapExpenses(expenses []mcduck.Expense) []*receiptsv1.Expense {
 	resExpenses := make([]*receiptsv1.Expense, len(expenses))
 	for i, e := range expenses {
 		resExp := receiptsv1.Expense{
@@ -321,7 +320,7 @@ func mapExpenses(expenses []expense.Expense) []*receiptsv1.Expense {
 			Category:    e.Category,
 			Subcategory: e.Subcategory,
 			Description: e.Description,
-			Amount:      uint64(expense.ConvertToCents(e.Amount)),
+			Amount:      uint64(mcduck.ConvertToCents(e.Amount)),
 		}
 
 		resExpenses[i] = &resExp
@@ -335,7 +334,7 @@ func delete[T any](s []T, i int) []T {
 	return s[:len(s)-1]
 }
 
-func mapReceiptStatus(r *receipt.Receipt) receiptsv1.ReceiptStatus {
+func mapReceiptStatus(r *mcduck.Receipt) receiptsv1.ReceiptStatus {
 	switch r.Status {
 	case "uploaded":
 		return receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED

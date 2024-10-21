@@ -8,8 +8,8 @@ import (
 
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
 	receiptsv1 "github.com/manzanit0/mcduck/gen/api/receipts.v1"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/internal/pgtest"
-	"github.com/manzanit0/mcduck/internal/receipt"
 	"github.com/manzanit0/mcduck/internal/users"
 	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/pubsub"
@@ -219,8 +219,8 @@ func TestUpdateReceipt(t *testing.T) {
 	_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 	require.NoError(t, err)
 
-	repo := receipt.NewRepository(db)
-	existingReceipt, err := repo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+	repo := mcduck.NewReceiptRepository(db)
+	existingReceipt, err := repo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 		Amount:      5,
 		Description: "description",
 		Vendor:      "vendor",
@@ -283,7 +283,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		updatedReceipt, err := repo.GetReceipt(ctx, uint64(existingReceipt.ID))
 		assert.NoError(t, err)
 		assert.Equal(t, updateStr, updatedReceipt.Vendor)
@@ -314,7 +314,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		updatedReceipt, err := repo.GetReceipt(ctx, uint64(existingReceipt.ID))
 		assert.NoError(t, err)
 		assert.Equal(t, updateValue, updatedReceipt.Vendor)
@@ -345,7 +345,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		updatedReceipt, err := repo.GetReceipt(ctx, uint64(existingReceipt.ID))
 		assert.NoError(t, err)
 		assert.Equal(t, updateValue, updatedReceipt.PendingReview)
@@ -376,7 +376,7 @@ func TestUpdateReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		updatedReceipt, err := repo.GetReceipt(ctx, uint64(existingReceipt.ID))
 		assert.NoError(t, err)
 		assert.Equal(t, "24/02/1993", updatedReceipt.Date.Format("02/01/2006"))
@@ -424,8 +424,8 @@ func TestDeleteReceipt(t *testing.T) {
 	_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 	require.NoError(t, err)
 
-	repo := receipt.NewRepository(db)
-	existingreceipt, err := repo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+	repo := mcduck.NewReceiptRepository(db)
+	existingreceipt, err := repo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 		Amount:      5,
 		Description: "description",
 		Vendor:      "vendor",
@@ -478,7 +478,7 @@ func TestDeleteReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		existingReceipt, err := repo.GetReceipt(ctx, uint64(existingreceipt.ID))
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, existingReceipt)
@@ -504,7 +504,7 @@ func TestDeleteReceipt(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		repo = receipt.NewRepository(db)
+		repo = mcduck.NewReceiptRepository(db)
 		existingReceipt, err := repo.GetReceipt(ctx, uint64(existingreceipt.ID))
 		require.NoError(t, err)
 		assert.NotNil(t, existingReceipt)
@@ -527,8 +527,8 @@ func TestGetReceipt(t *testing.T) {
 	_, err = users.Create(ctx, db, users.User{Email: userEmail, Password: "foo"})
 	require.NoError(t, err)
 
-	repo := receipt.NewRepository(db)
-	existingreceipt, err := repo.CreateReceipt(ctx, receipt.CreateReceiptRequest{
+	repo := mcduck.NewReceiptRepository(db)
+	existingreceipt, err := repo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
 		Amount:      5.00,
 		Description: "description",
 		Vendor:      "vendor",

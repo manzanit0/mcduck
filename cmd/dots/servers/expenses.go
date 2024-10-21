@@ -15,19 +15,19 @@ import (
 	"github.com/jmoiron/sqlx"
 	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
 	"github.com/manzanit0/mcduck/gen/api/expenses.v1/expensesv1connect"
-	"github.com/manzanit0/mcduck/internal/expense"
+	"github.com/manzanit0/mcduck/internal/mcduck"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
 type expensesServer struct {
-	Expenses *expense.Repository
+	Expenses *mcduck.ExpenseRepository
 }
 
 var _ expensesv1connect.ExpensesServiceClient = &expensesServer{}
 
 func NewExpensesServer(db *sqlx.DB) *expensesServer {
 	return &expensesServer{
-		Expenses: expense.NewRepository(db),
+		Expenses: mcduck.NewExpenseRepository(db),
 	}
 }
 
@@ -76,11 +76,11 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 
 	var amount *float32
 	if req.Msg.Amount != nil {
-		a := expense.ConvertToDollar(int32(*req.Msg.Amount))
+		a := mcduck.ConvertToDollar(int32(*req.Msg.Amount))
 		amount = &a
 	}
 
-	err = e.Expenses.UpdateExpense(ctx, expense.UpdateExpenseRequest{
+	err = e.Expenses.UpdateExpense(ctx, mcduck.UpdateExpenseRequest{
 		ID:          int64(req.Msg.Id),
 		Date:        date,
 		Amount:      amount,
@@ -111,7 +111,7 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 		Expense: &expensesv1.Expense{
 			Id:          exp.ID,
 			ReceiptId:   receiptID,
-			Amount:      uint64(expense.ConvertToCents(exp.Amount)),
+			Amount:      uint64(mcduck.ConvertToCents(exp.Amount)),
 			Date:        timestamppb.New(exp.Date),
 			Category:    exp.Category,
 			Subcategory: exp.Subcategory,
