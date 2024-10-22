@@ -1,10 +1,11 @@
+import { JSX } from "preact/jsx-runtime";
 import Checkbox from "../components/Checkbox.tsx";
 import FormattedMoney from "../components/FormattedMoney.tsx";
 import GenericTable from "../components/GenericTable.tsx";
 import TextInput from "../components/TextInput.tsx";
-import { createExpense } from "../lib/receipts.ts";
+import { createExpense, updateExpense } from "../lib/receipts.ts";
 import { SerializableExpense, toTimestamp } from "../lib/types.ts";
-import { useSignal } from "@preact/signals";
+import { Signal, useSignal } from "@preact/signals";
 
 interface TableProps {
   receiptId: bigint;
@@ -61,6 +62,51 @@ export default function ExpensesTable(props: TableProps) {
     // mapped.value = [...mapped.value, useSignal(expense)];
   };
 
+  const updateCategory = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+    r: Signal<CheckeableExpense>
+  ) => {
+    if (!e.currentTarget || e.currentTarget.value === "") {
+      return;
+    }
+
+    const value = e.currentTarget.value;
+    r.value = { ...r.value, category: value };
+    await updateExpense(props.url, { id: r.value.id, category: value });
+
+    console.log("updated category to", value);
+  };
+
+  const updateSubcategory = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+    r: Signal<CheckeableExpense>
+  ) => {
+    if (!e.currentTarget || e.currentTarget.value === "") {
+      return;
+    }
+
+    const value = e.currentTarget.value;
+    r.value = { ...r.value, subcategory: value };
+    await updateExpense(props.url, { id: r.value.id, subcategory: value });
+
+    console.log("updated subcategory to", value);
+  };
+
+  const updateDescription = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+    r: Signal<CheckeableExpense>
+  ) => {
+    if (!e.currentTarget || e.currentTarget.value === "") {
+      return;
+    }
+
+    const value = e.currentTarget.value;
+    r.value = { ...r.value, description: value };
+    await updateExpense(props.url, { id: r.value.id, description: value });
+
+    console.log("updated description to", value);
+  };
+
   return (
     <div class="sm:rounded-lg">
       <GenericTable
@@ -85,7 +131,7 @@ export default function ExpensesTable(props: TableProps) {
             accessor: (r) => (
               <TextInput
                 value={r.value.category}
-                onfocusout={() => Promise.resolve()}
+                onfocusout={(e) => updateCategory(e, r)}
               />
             ),
           },
@@ -94,7 +140,7 @@ export default function ExpensesTable(props: TableProps) {
             accessor: (r) => (
               <TextInput
                 value={r.value.subcategory}
-                onfocusout={() => Promise.resolve()}
+                onfocusout={(e) => updateSubcategory(e, r)}
               />
             ),
           },
@@ -103,7 +149,7 @@ export default function ExpensesTable(props: TableProps) {
             accessor: (r) => (
               <TextInput
                 value={r.value.description}
-                onfocusout={() => Promise.resolve()}
+                onfocusout={(e) => updateDescription(e, r)}
               />
             ),
           },

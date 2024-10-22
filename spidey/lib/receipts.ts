@@ -4,7 +4,7 @@ import { ReceiptsService } from "../gen/api/receipts.v1/receipts_connect.ts";
 import { UpdateReceiptRequest } from "../gen/api/receipts.v1/receipts_pb.ts";
 import { getAuthTokenFromBrowser } from "./auth.ts";
 import { PartialMessage } from "@bufbuild/protobuf";
-import { CreateExpenseRequest } from "../gen/api/expenses.v1/expenses_pb.ts";
+import { CreateExpenseRequest, UpdateExpenseRequest } from "../gen/api/expenses.v1/expenses_pb.ts";
 import { ExpensesService } from "../gen/api/expenses.v1/expenses_connect.ts";
 
 export function updateReceipt(host: string, body: PartialMessage<UpdateReceiptRequest>) {
@@ -33,6 +33,21 @@ export function createExpense(host: string, body: PartialMessage<CreateExpenseRe
   const { authToken } = getAuthTokenFromBrowser();
 
   return client.createExpense(body, {
+    headers: { authorization: `Bearer ${authToken}` },
+  });
+}
+
+export function updateExpense(host: string, body: PartialMessage<UpdateExpenseRequest>) {
+  const client = createPromiseClient(
+    ExpensesService,
+    createConnectTransport({
+      baseUrl: host,
+    }),
+  );
+
+  const { authToken } = getAuthTokenFromBrowser();
+
+  return client.updateExpense(body, {
     headers: { authorization: `Bearer ${authToken}` },
   });
 }

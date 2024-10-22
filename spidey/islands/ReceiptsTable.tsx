@@ -62,12 +62,13 @@ export default function ReceiptsTable(props: TableProps) {
 
     checkedReceiptIds.value = mapped
       .filter((x) => x.value.checked)
-      .map((x) => x.value.id).join(",");
+      .map((x) => x.value.id)
+      .join(",");
   };
 
   const updateVendor = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<ViewReceipt>,
+    r: Signal<ViewReceipt>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -86,7 +87,7 @@ export default function ReceiptsTable(props: TableProps) {
 
   const updateDate = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<ViewReceipt>,
+    r: Signal<ViewReceipt>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -154,10 +155,10 @@ export default function ReceiptsTable(props: TableProps) {
                 checked={r.value.checked}
                 onInput={() => {
                   r.value.checked = !r.value.checked;
-                  checkedReceiptIds.value = displayedReceipts
-                    .value
+                  checkedReceiptIds.value = displayedReceipts.value
                     .filter((x) => x.value.checked)
-                    .map((x) => x.value.id).join(",");
+                    .map((x) => x.value.id)
+                    .join(",");
                 }}
               />
             ),
