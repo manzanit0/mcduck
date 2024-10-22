@@ -15,6 +15,7 @@ import (
 
 	"github.com/manzanit0/mcduck/cmd/dots/servers"
 	"github.com/manzanit0/mcduck/gen/api/auth.v1/authv1connect"
+	"github.com/manzanit0/mcduck/gen/api/expenses.v1/expensesv1connect"
 	"github.com/manzanit0/mcduck/gen/api/receipts.v1/receiptsv1connect"
 	"github.com/manzanit0/mcduck/gen/api/users.v1/usersv1connect"
 	"github.com/manzanit0/mcduck/pkg/auth"
@@ -86,6 +87,11 @@ func run() error {
 
 	mux.Handle(usersv1connect.NewUsersServiceHandler(
 		servers.NewUsersServer(dbx),
+		connect.WithInterceptors(otelInterceptor, authInterceptor, traceEnhancer),
+	))
+
+	mux.Handle(expensesv1connect.NewExpensesServiceHandler(
+		servers.NewExpensesServer(dbx),
 		connect.WithInterceptors(otelInterceptor, authInterceptor, traceEnhancer),
 	))
 

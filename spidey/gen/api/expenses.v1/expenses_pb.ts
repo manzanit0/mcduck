@@ -25,6 +25,21 @@ export class CreateExpenseRequest extends Message<CreateExpenseRequest> {
    */
   receiptId?: bigint;
 
+  /**
+   * @generated from field: optional string category = 4;
+   */
+  category?: string;
+
+  /**
+   * @generated from field: optional string subcategory = 5;
+   */
+  subcategory?: string;
+
+  /**
+   * @generated from field: optional string description = 6;
+   */
+  description?: string;
+
   constructor(data?: PartialMessage<CreateExpenseRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -36,6 +51,9 @@ export class CreateExpenseRequest extends Message<CreateExpenseRequest> {
     { no: 1, name: "amount", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
     { no: 2, name: "date", kind: "message", T: Timestamp },
     { no: 3, name: "receipt_id", kind: "scalar", T: 4 /* ScalarType.UINT64 */, opt: true },
+    { no: 4, name: "category", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "subcategory", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateExpenseRequest {

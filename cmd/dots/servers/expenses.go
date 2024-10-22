@@ -18,6 +18,7 @@ import (
 	expensesv1 "github.com/manzanit0/mcduck/gen/api/expenses.v1"
 	"github.com/manzanit0/mcduck/gen/api/expenses.v1/expensesv1connect"
 	"github.com/manzanit0/mcduck/internal/mcduck"
+	"github.com/manzanit0/mcduck/pkg/auth"
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
@@ -34,8 +35,52 @@ func NewExpensesServer(db *sqlx.DB) *expensesServer {
 }
 
 // CreateExpense implements expensesv1connect.ExpensesServiceClient.
-func (e *expensesServer) CreateExpense(context.Context, *connect.Request[expensesv1.CreateExpenseRequest]) (*connect.Response[expensesv1.CreateExpenseResponse], error) {
-	panic("unimplemented")
+func (e *expensesServer) CreateExpense(ctx context.Context, req *connect.Request[expensesv1.CreateExpenseRequest]) (*connect.Response[expensesv1.CreateExpenseResponse], error) {
+	span := trace.SpanFromContext(ctx)
+	email := auth.MustGetUserEmailConnect(ctx)
+
+	expenseID, err := e.Expenses.CreateExpense(ctx, mcduck.CreateExpenseRequest{
+		UserEmail:   email,
+		Date:        req.Msg.Date.AsTime(),
+		Amount:      mcduck.ConvertToDollar(int32(req.Msg.Amount)),
+		ReceiptID:   req.Msg.ReceiptId,
+		Category:    req.Msg.Category,
+		Subcategory: req.Msg.Subcategory,
+		Description: req.Msg.Description,
+	})
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		slog.ErrorContext(ctx, "failed to create expense", "error", err.Error())
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to create expense: %w", err))
+	}
+
+	var category string
+	if req.Msg.Category != nil {
+		category = *req.Msg.Category
+	}
+
+	var subcategory string
+	if req.Msg.Subcategory != nil {
+		category = *req.Msg.Subcategory
+	}
+
+	var description string
+	if req.Msg.Description != nil {
+		category = *req.Msg.Description
+	}
+
+	res := connect.NewResponse(&expensesv1.CreateExpenseResponse{
+		Expense: &expensesv1.Expense{
+			Id:          uint64(expenseID),
+			ReceiptId:   req.Msg.ReceiptId,
+			Amount:      req.Msg.Amount,
+			Date:        req.Msg.Date,
+			Category:    category,
+			Subcategory: subcategory,
+			Description: description,
+		},
+	})
+	return res, nil
 }
 
 // DeleteExpense implements expensesv1connect.ExpensesServiceClient.

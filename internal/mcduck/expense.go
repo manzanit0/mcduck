@@ -385,10 +385,13 @@ func (r *ExpenseRepository) UpdateExpense(ctx context.Context, e UpdateExpenseRe
 }
 
 type CreateExpenseRequest struct {
-	UserEmail string
-	Date      time.Time
-	Amount    float32
-	ReceiptID *uint64
+	UserEmail   string
+	Date        time.Time
+	Amount      float32
+	ReceiptID   *uint64
+	Category    *string
+	Subcategory *string
+	Description *string
 }
 
 func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRequest) (int64, error) {
@@ -399,8 +402,8 @@ func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRe
 
 	builder := psql.
 		Insert("expenses").
-		Columns("user_email", "amount, expense_date", "receipt_id").
-		Values(e.UserEmail, ConvertToCents(e.Amount), e.Date, e.ReceiptID).
+		Columns("user_email", "amount, expense_date", "receipt_id", "category", "sub_category", "description").
+		Values(e.UserEmail, ConvertToCents(e.Amount), e.Date, e.ReceiptID, e.Category, e.Subcategory, e.Description).
 		Suffix("RETURNING \"id\"")
 
 	query, args, err := builder.ToSql()

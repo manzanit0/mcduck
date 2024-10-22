@@ -1,3 +1,4 @@
+import { Timestamp } from "@bufbuild/protobuf";
 import {
   Expense,
   FullReceipt,
@@ -71,4 +72,12 @@ export function mapExpensesToSerializable(
       amount: e.amount,
     };
   });
+}
+
+export function toStringDate(date: Timestamp): string {
+  return date.toDate().toISOString()
+}
+
+export function toTimestamp(date: string): Timestamp {
+  return Timestamp.fromDate(new Date(date))
 }

@@ -12,7 +12,7 @@ import {
 import { AuthState } from "../../lib/auth.ts";
 import ReceiptForm from "../../islands/ReceiptForm.tsx";
 
-const url = Deno.env.get("API_HOST")!;
+const url = Deno.env.get("API_HOST") || "";
 
 export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
   console.log("get receipt");
@@ -26,7 +26,7 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
     { id: BigInt(ctx.params.id) },
     {
       headers: { authorization: `Bearer ${ctx.state.authToken}` },
-    },
+    }
   );
 
   const receipt = mapFullReceiptToSerializable(res.receipt!);
@@ -61,9 +61,7 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
         Receipt #{ctx.params.id}
       </h2>
       <div class="mt-10 grid grid-cols-3 gap-4 items-center">
-        <div class="col-span-1 h-full">
-          {receiptView}
-        </div>
+        <div class="col-span-1 h-full">{receiptView}</div>
         <div class="col-span-2 p-5">
           <ReceiptForm receipt={receipt} url={url} />
           <div class="mt-10">
@@ -74,6 +72,8 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
               <ExpensesTable
                 expenses={mapExpensesToSerializable(res.receipt!.expenses)}
                 url={url}
+                receiptId={res.receipt!.id}
+                receiptDate={res.receipt!.date!.toDate().toISOString()}
               />
             </div>
           </div>
@@ -88,9 +88,7 @@ function detectContentType(data: Uint8Array): string {
 
   if (inspected.includes("[255,216,255")) {
     return "image/jpeg";
-  } else if (
-    inspected.includes("[137,80,78,71,13,10,26,10")
-  ) {
+  } else if (inspected.includes("[137,80,78,71,13,10,26,10")) {
     return "image/png";
   } else if (inspected.includes("[71,73,70,56")) {
     return "image/gif";
