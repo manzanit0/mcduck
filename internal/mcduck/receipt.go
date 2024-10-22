@@ -16,7 +16,7 @@ import (
 )
 
 type Receipt struct {
-	ID            int64
+	ID            uint64
 	PendingReview bool
 	Status        string
 	Image         []byte
@@ -29,7 +29,7 @@ type Receipt struct {
 }
 
 type dbReceipt struct {
-	ID            int64   `db:"id"`
+	ID            uint64  `db:"id"`
 	PendingReview bool    `db:"pending_review"`
 	Status        string  `db:"status"`
 	Image         []byte  `db:"receipt_image"`
@@ -120,7 +120,7 @@ func (r *ReceiptRepository) CreateReceipt(ctx context.Context, input CreateRecei
 		e := ExpensesBatch{
 			UserEmail: input.Email,
 			Records: []Expense{{
-				ReceiptID:   uint64(record.ID),
+				ReceiptID:   record.ID,
 				Date:        input.Date,
 				Amount:      float32(input.Amount),
 				UserEmail:   input.Email,
@@ -144,7 +144,7 @@ func (r *ReceiptRepository) CreateReceipt(ctx context.Context, input CreateRecei
 }
 
 type UpdateReceiptRequest struct {
-	ID            int64
+	ID            uint64
 	Vendor        *string
 	PendingReview *bool
 	Date          *time.Time
@@ -483,7 +483,7 @@ func (r *ReceiptRepository) GetReceiptImage(ctx context.Context, receiptID uint6
 	return receipt.Image, nil
 }
 
-func (r *ReceiptRepository) DeleteReceipt(ctx context.Context, id int64) error {
+func (r *ReceiptRepository) DeleteReceipt(ctx context.Context, id uint64) error {
 	ctx, span := xtrace.StartSpan(ctx, "Delete Receipt")
 	defer span.End()
 
@@ -556,7 +556,7 @@ func (a *AIaugmentor) AugmentCreatedReceipt(ctx context.Context, ev *receiptsevv
 
 	pendingReview := true
 	err = receiptRepo.UpdateReceiptWithTxn(ctx, txn, UpdateReceiptRequest{
-		ID:            int64(ev.Receipt.Id),
+		ID:            ev.Receipt.Id,
 		Vendor:        &parsedReceipt.Vendor,
 		Date:          &parsedTime,
 		PendingReview: &pendingReview,

@@ -127,7 +127,7 @@ func (d *ReceiptsController) UpdateReceipt(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	i, err := strconv.ParseInt(id, 10, 64)
+	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unable to parse receipt id: %s", err.Error())})
@@ -236,7 +236,7 @@ func (d *ReceiptsController) DeleteReceipt(c *gin.Context) {
 	ctx, span := xtrace.GetSpan(c.Request.Context())
 
 	id := c.Param("id")
-	i, err := strconv.ParseInt(id, 10, 64)
+	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unable to parse receipt id: %s", err.Error())})

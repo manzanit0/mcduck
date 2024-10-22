@@ -70,7 +70,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 
 			data, topic, err := pubsub.MarshalProto(&receiptsevv1.ReceiptCreated{
 				Receipt: &receiptsevv1.Receipt{
-					Id:   uint64(created.ID),
+					Id:   created.ID,
 					File: file,
 				},
 				UserEmail: email,
@@ -111,7 +111,7 @@ func (s *receiptsServer) CreateReceipts(ctx context.Context, req *connect.Reques
 
 	for e := range ch {
 		res.Msg.Receipts = append(res.Msg.Receipts, &receiptsv1.CreatedReceipt{
-			Id:     uint64(e.ID),
+			Id:     e.ID,
 			Status: receiptsv1.ReceiptStatus_RECEIPT_STATUS_UPLOADED,
 		})
 	}
@@ -139,7 +139,7 @@ func (s *receiptsServer) UpdateReceipt(ctx context.Context, req *connect.Request
 	}
 
 	dto := mcduck.UpdateReceiptRequest{
-		ID:            int64(req.Msg.Id),
+		ID:            req.Msg.Id,
 		Vendor:        req.Msg.Vendor,
 		PendingReview: req.Msg.PendingReview,
 		Date:          date,
@@ -160,7 +160,7 @@ func (s *receiptsServer) DeleteReceipt(ctx context.Context, req *connect.Request
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(attribute.Int("receipt.id", int(req.Msg.Id)))
 
-	err := s.Receipts.DeleteReceipt(ctx, int64(req.Msg.Id))
+	err := s.Receipts.DeleteReceipt(ctx, req.Msg.Id)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to delete receipt", "error", err.Error())
 		span.SetStatus(codes.Error, err.Error())
@@ -220,7 +220,7 @@ func (s *receiptsServer) ListReceipts(ctx context.Context, req *connect.Request[
 	var resReceipts []*receiptsv1.Receipt
 	for _, r := range receipts {
 		resReceipts = append(resReceipts, &receiptsv1.Receipt{
-			Id:          uint64(r.ID),
+			Id:          r.ID,
 			Status:      mapReceiptStatus(&r),
 			Vendor:      r.Vendor,
 			Date:        timestamppb.New(r.Date),
@@ -254,7 +254,7 @@ func (s *receiptsServer) GetReceipt(ctx context.Context, req *connect.Request[re
 
 	res := connect.NewResponse(&receiptsv1.GetReceiptResponse{
 		Receipt: &receiptsv1.FullReceipt{
-			Id:       uint64(receipt.ID),
+			Id:       receipt.ID,
 			Status:   mapReceiptStatus(receipt),
 			Vendor:   receipt.Vendor,
 			Date:     timestamppb.New(receipt.Date),
