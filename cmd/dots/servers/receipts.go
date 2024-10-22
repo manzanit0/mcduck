@@ -275,7 +275,7 @@ func mapExpenses(expenses []mcduck.Expense) []*receiptsv1.Expense {
 			Category:    e.Category,
 			Subcategory: e.Subcategory,
 			Description: e.Description,
-			Amount:      uint64(mcduck.ConvertToCents(e.Amount)),
+			Amount:      e.Amount,
 		}
 
 		resExpenses[i] = &resExp

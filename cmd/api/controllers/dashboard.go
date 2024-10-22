@@ -104,6 +104,16 @@ func (d *DashboardController) LiveDemo(c *gin.Context) {
 	}
 
 	totalSpendsArr := TotalSpendLastThreeMonths(expenses)
+	top3Categories := mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear)
+
+	var formattedTop3Categories []FormattedCategoryAggregate
+	for _, t := range top3Categories {
+		formattedTop3Categories = append(formattedTop3Categories, FormattedCategoryAggregate{
+			Category:    t.Category,
+			MonthYear:   t.MonthYear,
+			TotalAmount: fmt.Sprintf("%0.2f", mcduck.ConvertToDollar(t.TotalAmount)),
+		})
+	}
 
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"PrettyMonthYear":        mostRecent.Format("January 2006"),
@@ -111,9 +121,15 @@ func (d *DashboardController) LiveDemo(c *gin.Context) {
 		"Categories":             categoryLabels,
 		"CategoriesChartData":    categoryChartData,
 		"SubcategoriesChartData": subcategoryCharts,
-		"TopCategories":          mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
+		"TopCategories":          formattedTop3Categories,
 		"TotalSpends":            totalSpendsArr,
 	})
+}
+
+type FormattedCategoryAggregate struct {
+	Category    string
+	MonthYear   string
+	TotalAmount string
 }
 
 func (d *DashboardController) Dashboard(c *gin.Context) {
@@ -154,13 +170,24 @@ func (d *DashboardController) Dashboard(c *gin.Context) {
 
 	totalSpendsArr := TotalSpendLastThreeMonths(expenses)
 
+	top3Categories := mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear)
+
+	var formattedTop3Categories []FormattedCategoryAggregate
+	for _, t := range top3Categories {
+		formattedTop3Categories = append(formattedTop3Categories, FormattedCategoryAggregate{
+			Category:    t.Category,
+			MonthYear:   t.MonthYear,
+			TotalAmount: fmt.Sprintf("%0.2f", mcduck.ConvertToDollar(t.TotalAmount)),
+		})
+	}
+
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"PrettyMonthYear":        mostRecent.Format("January 2006"),
 		"NoExpenses":             len(expenses) == 0,
 		"Categories":             categoryLabels,
 		"CategoriesChartData":    categoryChartData,
 		"SubcategoriesChartData": subcategoryCharts,
-		"TopCategories":          mcduck.GetTop3ExpenseCategories(expenses, mostRecentMonthYear),
+		"TopCategories":          formattedTop3Categories,
 		"TotalSpends":            totalSpendsArr,
 		"User":                   user,
 	})
@@ -168,7 +195,7 @@ func (d *DashboardController) Dashboard(c *gin.Context) {
 
 type MonthlySpend struct {
 	date      time.Time
-	amount    float32
+	amount    uint64
 	MonthYear string
 	Amount    string
 }
@@ -188,11 +215,11 @@ func TotalSpendLastThreeMonths(expenses []mcduck.Expense) []*MonthlySpend {
 				date:      expenses[i].Date,
 				MonthYear: key,
 				amount:    expenses[i].Amount,
-				Amount:    fmt.Sprintf("%.2f", expenses[i].Amount),
+				Amount:    fmt.Sprintf("%.2f", mcduck.ConvertToDollar(expenses[i].Amount)),
 			}
 		} else {
 			val.amount += expenses[i].Amount
-			val.Amount = fmt.Sprintf("%.2f", val.amount)
+			val.Amount = fmt.Sprintf("%.2f", mcduck.ConvertToDollar(val.amount))
 		}
 	}
 
@@ -253,13 +280,13 @@ func GroupSubcategoriesByCategory(list []mcduck.Expense) map[string][]string {
 	return mm
 }
 
-func buildChartData(labels []string, totals map[string]map[string]float32) ChartData {
+func buildChartData(labels []string, totals map[string]map[string]uint64) ChartData {
 	var datasets []Dataset
 	for monthYear, amountsByCategory := range totals { // totalsByMonth[monthYear][expense.Category] += expense.Amount
 		var data []string
 		for _, label := range labels {
 			if amount, ok := amountsByCategory[label]; ok {
-				data = append(data, fmt.Sprintf("%.2f", amount))
+				data = append(data, fmt.Sprintf("%.2f", mcduck.ConvertToDollar(amount)))
 			} else {
 				data = append(data, "0.00")
 			}
@@ -361,7 +388,7 @@ func (d *DashboardController) UploadExpenses(c *gin.Context) {
 	})
 }
 
-func getSecondClassifier(calculations map[string]map[string]float32) []string {
+func getSecondClassifier(calculations map[string]map[string]uint64) []string {
 	classifierMap := map[string]bool{}
 	classifierSlice := []string{}
 	for _, amountByClassifier := range calculations {

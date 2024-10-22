@@ -21,7 +21,7 @@ import (
 type Expense struct {
 	ID          uint64
 	Date        time.Time
-	Amount      float32
+	Amount      uint64
 	Category    string
 	Subcategory string
 	UserEmail   string
@@ -29,13 +29,11 @@ type Expense struct {
 	Description string
 }
 
-// dbExpense is the representation of an expense in the database. For instance,
-// the amount is saved as an integer in the DB, but presented to the user as a
-// float32.
+// dbExpense is the representation of an expense in the database.
 type dbExpense struct {
 	ID          uint64    `db:"id"`
 	Date        time.Time `db:"expense_date"`
-	Amount      int32     `db:"amount"`
+	Amount      uint64    `db:"amount"`
 	Category    *string   `db:"category"`
 	Subcategory *string   `db:"sub_category"`
 	UserEmail   string    `db:"user_email"`
@@ -62,12 +60,12 @@ func FindMostRecentTime(expenses []Expense) time.Time {
 	return mostRecent
 }
 
-func CalculateTotalsPerCategory(expenses []Expense) map[string]map[string]float32 {
-	totalsByMonth := make(map[string]map[string]float32)
+func CalculateTotalsPerCategory(expenses []Expense) map[string]map[string]uint64 {
+	totalsByMonth := make(map[string]map[string]uint64)
 	for _, expense := range expenses {
 		monthYear := expense.Date.Format("2006-01")
 		if _, ok := totalsByMonth[monthYear]; !ok {
-			totalsByMonth[monthYear] = make(map[string]float32)
+			totalsByMonth[monthYear] = make(map[string]uint64)
 		}
 
 		totalsByMonth[monthYear][expense.Category] += expense.Amount
@@ -76,12 +74,12 @@ func CalculateTotalsPerCategory(expenses []Expense) map[string]map[string]float3
 	return totalsByMonth
 }
 
-func CalculateTotalsPerSubCategory(expenses []Expense) map[string]map[string]float32 {
-	totalsByMonth := make(map[string]map[string]float32)
+func CalculateTotalsPerSubCategory(expenses []Expense) map[string]map[string]uint64 {
+	totalsByMonth := make(map[string]map[string]uint64)
 	for _, expense := range expenses {
 		monthYear := expense.Date.Format("2006-01")
 		if _, ok := totalsByMonth[monthYear]; !ok {
-			totalsByMonth[monthYear] = make(map[string]float32)
+			totalsByMonth[monthYear] = make(map[string]uint64)
 		}
 
 		totalsByMonth[monthYear][expense.Subcategory] += expense.Amount
@@ -90,11 +88,11 @@ func CalculateTotalsPerSubCategory(expenses []Expense) map[string]map[string]flo
 	return totalsByMonth
 }
 
-func CalculateMonthOverMonthTotals(expenses []Expense) map[string]map[string]float32 {
-	totalsByCategory := make(map[string]map[string]float32)
+func CalculateMonthOverMonthTotals(expenses []Expense) map[string]map[string]uint64 {
+	totalsByCategory := make(map[string]map[string]uint64)
 	for _, expense := range expenses {
 		if _, ok := totalsByCategory[expense.Category]; !ok {
-			totalsByCategory[expense.Category] = make(map[string]float32)
+			totalsByCategory[expense.Category] = make(map[string]uint64)
 		}
 
 		monthYear := expense.Date.Format("2006-01")
@@ -107,7 +105,7 @@ func CalculateMonthOverMonthTotals(expenses []Expense) map[string]map[string]flo
 type CategoryAggregate struct {
 	Category    string
 	MonthYear   string
-	TotalAmount float32
+	TotalAmount uint64
 }
 
 func GetTop3ExpenseCategories(expenses []Expense, monthYear string) []CategoryAggregate {
@@ -118,12 +116,7 @@ func GetTop3ExpenseCategories(expenses []Expense, monthYear string) []CategoryAg
 		}
 
 		if i, aggr, found := findAggregateByCategory(aggregates, e.Subcategory); found {
-			// NOTE: there is a lot of converting here. If it ends up being
-			// slow; having an intermediate structure which just uses integers
-			// and then we do a single final conversion, should help.
-			current := ConvertToCents(aggr.TotalAmount)
-			total := current + ConvertToCents(e.Amount)
-			aggregates[i].TotalAmount = ConvertToDollar(total)
+			aggregates[i].TotalAmount = aggr.TotalAmount + e.Amount
 		} else {
 			// NOTE: we don't really want to report on empty subcategories since it doesn't provide much value
 			if e.Subcategory == "" {
@@ -186,7 +179,7 @@ func NewExpenses(data [][]string) ([]Expense, error) {
 
 		expenses[k] = Expense{
 			Date:        date,
-			Amount:      float32(amount),
+			Amount:      ConvertToCents(float32(amount)),
 			Category:    rows[2],
 			Subcategory: rows[3],
 		}
@@ -270,7 +263,7 @@ func CreateExpenses(ctx context.Context, tx QueryExecutor, e ExpensesBatch) erro
 		builder = builder.Values(
 			e.UserEmail,
 			expense.Date,
-			ConvertToCents(expense.Amount),
+			expense.Amount,
 			expense.Category,
 			expense.Subcategory,
 			expense.Description,
@@ -320,7 +313,7 @@ func (r *ExpenseRepository) FindExpense(ctx context.Context, id int64) (*Expense
 type UpdateExpenseRequest struct {
 	ID          int64
 	Date        *time.Time
-	Amount      *float32
+	Amount      *uint64
 	Category    *string
 	Subcategory *string
 	Description *string
@@ -338,7 +331,7 @@ func (r *ExpenseRepository) UpdateExpense(ctx context.Context, e UpdateExpenseRe
 	builder := psql.Update("expenses").Where(sq.Eq{"id": e.ID})
 
 	if e.Amount != nil {
-		builder = builder.Set("amount", ConvertToCents(*e.Amount))
+		builder = builder.Set("amount", *e.Amount)
 		shouldUpdate = true
 	}
 
@@ -387,7 +380,7 @@ func (r *ExpenseRepository) UpdateExpense(ctx context.Context, e UpdateExpenseRe
 type CreateExpenseRequest struct {
 	UserEmail   string
 	Date        time.Time
-	Amount      float32
+	Amount      uint64
 	ReceiptID   *uint64
 	Category    *string
 	Subcategory *string
@@ -403,7 +396,7 @@ func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRe
 	builder := psql.
 		Insert("expenses").
 		Columns("user_email", "amount, expense_date", "receipt_id", "category", "sub_category", "description").
-		Values(e.UserEmail, ConvertToCents(e.Amount), e.Date, e.ReceiptID, e.Category, e.Subcategory, e.Description).
+		Values(e.UserEmail, e.Amount, e.Date, e.ReceiptID, e.Category, e.Subcategory, e.Description).
 		Suffix("RETURNING \"id\"")
 
 	query, args, err := builder.ToSql()
@@ -489,11 +482,11 @@ func (r *ExpenseRepository) ListExpensesForReceipt(ctx context.Context, receiptI
 	return expensesList, nil
 }
 
-func ConvertToCents(amount float32) int32 {
-	return int32(math.Round(float64(amount * 100)))
+func ConvertToCents(amount float32) uint64 {
+	return uint64(math.Round(float64(amount * 100)))
 }
 
-func ConvertToDollar(cents int32) float32 {
+func ConvertToDollar(cents uint64) float32 {
 	if cents == 0 {
 		return float32(0)
 	}
@@ -505,7 +498,7 @@ func toDomainExpense(expense dbExpense) Expense {
 	e := Expense{
 		ID:        expense.ID,
 		Date:      expense.Date,
-		Amount:    ConvertToDollar(expense.Amount),
+		Amount:    expense.Amount,
 		UserEmail: expense.UserEmail,
 	}
 

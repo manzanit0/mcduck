@@ -42,7 +42,7 @@ func (e *expensesServer) CreateExpense(ctx context.Context, req *connect.Request
 	expenseID, err := e.Expenses.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 		UserEmail:   email,
 		Date:        req.Msg.Date.AsTime(),
-		Amount:      mcduck.ConvertToDollar(int32(req.Msg.Amount)),
+		Amount:      req.Msg.Amount,
 		ReceiptID:   req.Msg.ReceiptId,
 		Category:    req.Msg.Category,
 		Subcategory: req.Msg.Subcategory,
@@ -123,16 +123,10 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 		date = &d
 	}
 
-	var amount *float32
-	if req.Msg.Amount != nil {
-		a := mcduck.ConvertToDollar(int32(*req.Msg.Amount))
-		amount = &a
-	}
-
 	err = e.Expenses.UpdateExpense(ctx, mcduck.UpdateExpenseRequest{
 		ID:          int64(req.Msg.Id),
 		Date:        date,
-		Amount:      amount,
+		Amount:      req.Msg.Amount,
 		Category:    req.Msg.Category,
 		Subcategory: req.Msg.Subcategory,
 		Description: req.Msg.Description,
@@ -160,7 +154,7 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 		Expense: &expensesv1.Expense{
 			Id:          exp.ID,
 			ReceiptId:   receiptID,
-			Amount:      uint64(mcduck.ConvertToCents(exp.Amount)),
+			Amount:      exp.Amount,
 			Date:        timestamppb.New(exp.Date),
 			Category:    exp.Category,
 			Subcategory: exp.Subcategory,

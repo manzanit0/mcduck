@@ -529,7 +529,7 @@ func TestGetReceipt(t *testing.T) {
 
 	repo := mcduck.NewReceiptRepository(db)
 	existingreceipt, err := repo.CreateReceipt(ctx, mcduck.CreateReceiptRequest{
-		Amount:      5.00,
+		Amount:      5,
 		Description: "description",
 		Vendor:      "vendor",
 		Image:       []byte("foo"),
@@ -590,7 +590,7 @@ func TestGetReceipt(t *testing.T) {
 
 		require.Len(t, res.Msg.Receipt.Expenses, 1)
 		assert.Equal(t, res.Msg.Receipt.Expenses[0].Date.AsTime().Format("02/01/2006"), time.Now().Format("02/01/2006"))
-		assert.EqualValues(t, res.Msg.Receipt.Expenses[0].Amount, 500)
+		assert.EqualValues(t, res.Msg.Receipt.Expenses[0].Amount, 5)
 	})
 
 	t.Run("when receipt doesn't exist, returns not found", func(t *testing.T) {

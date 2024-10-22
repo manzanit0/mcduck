@@ -3,7 +3,6 @@ package mcduck_test
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"testing"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 func TestCalculateTotalsPerCategory(t *testing.T) {
 	testCases := []struct {
 		expenses []mcduck.Expense
-		result   map[string]map[string]float32
+		result   map[string]map[string]uint64
 	}{
 		{
 			expenses: []mcduck.Expense{
@@ -23,19 +22,19 @@ func TestCalculateTotalsPerCategory(t *testing.T) {
 				{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "c", Amount: 1},
 				{Date: time.Date(2006, 2, 1, 0, 0, 0, 0, time.UTC), Category: "c", Amount: 2},
 			},
-			result: map[string]map[string]float32{
+			result: map[string]map[string]uint64{
 				"2006-01": {"a": 1},
 				"2006-02": {"a": 1, "b": 1, "c": 3},
 			},
 		},
 		{
 			expenses: []mcduck.Expense{
-				{Date: time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1.3},
-				{Date: time.Date(2008, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 1.2},
+				{Date: time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 13},
+				{Date: time.Date(2008, 1, 1, 0, 0, 0, 0, time.UTC), Category: "a", Amount: 12},
 			},
-			result: map[string]map[string]float32{
-				"2006-01": {"a": 1.3},
-				"2008-01": {"a": 1.2},
+			result: map[string]map[string]uint64{
+				"2006-01": {"a": 13},
+				"2008-01": {"a": 12},
 			},
 		},
 	}
@@ -49,7 +48,7 @@ func TestCalculateTotalsPerCategory(t *testing.T) {
 			for month, monthTotals := range totals {
 				for category, total := range monthTotals {
 					if tC.result[month][category] != total {
-						t.Errorf("expected %f for %s-%s, got %f", tC.result[month][category], month, category, total)
+						t.Errorf("expected %d for %s-%s, got %d", tC.result[month][category], month, category, total)
 					}
 				}
 			}
@@ -67,7 +66,7 @@ func TestCalculateMonthOverMonthTotals(t *testing.T) {
 		{Date: time.Date(2006, 3, 1, 0, 0, 0, 0, time.UTC), Category: "d", Amount: 4},
 	}
 
-	want := map[string]map[string]float32{
+	want := map[string]map[string]uint64{
 		"a": {"2006-01": 1, "2006-02": 1, "2006-03": 0},
 		"b": {"2006-01": 0, "2006-02": 2, "2006-03": 0},
 		"c": {"2006-01": 0, "2006-02": 6, "2006-03": 0},
@@ -83,7 +82,7 @@ func TestCalculateMonthOverMonthTotals(t *testing.T) {
 	for category, amountsByMonth := range got {
 		for month, amount := range amountsByMonth {
 			if want[category][month] != amount {
-				t.Errorf("wanted %f for %s in %s, got %f", want[category][month], category, month, amount)
+				t.Errorf("wanted %d for %s in %s, got %d", want[category][month], category, month, amount)
 			}
 		}
 	}
@@ -100,53 +99,31 @@ func TestGetTop3ExpenseCategories(t *testing.T) {
 			desc:      "when less than three categories are provided, then they're all returned",
 			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
 			input: []mcduck.Expense{
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 3.3},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 11},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 11},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 33},
 			},
 			output: []mcduck.CategoryAggregate{
-				{Category: "bar", MonthYear: "2008-02", TotalAmount: 3.3},
-				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.2},
+				{Category: "bar", MonthYear: "2008-02", TotalAmount: 33},
+				{Category: "foo", MonthYear: "2008-02", TotalAmount: 22},
 			},
 		},
 		{
 			desc:      "when more than three categories are provided, then only the top three are returned",
 			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
 			input: []mcduck.Expense{
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.1},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 3.3},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 1.02},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 4.4},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 5.5},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "nope", Amount: 0.5},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 11},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 11},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "bar", Amount: 33},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 102},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 44},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "baz", Amount: 55},
+				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "nope", Amount: 5},
 			},
 			output: []mcduck.CategoryAggregate{
-				{Category: "baz", MonthYear: "2008-02", TotalAmount: 10.92},
-				{Category: "bar", MonthYear: "2008-02", TotalAmount: 3.3},
-				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.2},
-			},
-		},
-		{
-			desc:      "when input expenses contain more than 2 decimals, then aggregates returned only 2 decimals",
-			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []mcduck.Expense{
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.11111111119},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.11111111119},
-			},
-			output: []mcduck.CategoryAggregate{
-				{Category: "foo", MonthYear: "2008-02", TotalAmount: 2.22},
-			},
-		},
-		{
-			desc:      "when input expenses contain more than two decimals, then aggregates apply rounding as oposed to truncation",
-			monthYear: mcduck.NewMonthYear(time.Date(2008, time.February, 2, 0, 0, 0, 0, time.UTC)),
-			input: []mcduck.Expense{
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.49999},
-				{Date: time.Date(2008, time.February, 11, 0, 0, 0, 0, time.UTC), Subcategory: "foo", Amount: 1.49999},
-			},
-			output: []mcduck.CategoryAggregate{
-				{Category: "foo", MonthYear: "2008-02", TotalAmount: 3},
+				{Category: "baz", MonthYear: "2008-02", TotalAmount: 201},
+				{Category: "bar", MonthYear: "2008-02", TotalAmount: 33},
+				{Category: "foo", MonthYear: "2008-02", TotalAmount: 22},
 			},
 		},
 	}
@@ -158,7 +135,7 @@ func TestGetTop3ExpenseCategories(t *testing.T) {
 					t.Error("unexpected category", aggregate[i].Category, "expected", tC.output[i].Category)
 				}
 
-				if !almostEqual(aggregate[i].TotalAmount, tC.output[i].TotalAmount) {
+				if aggregate[i].TotalAmount != tC.output[i].TotalAmount {
 					t.Error("unexpected amount", aggregate[i].TotalAmount, "expected", tC.output[i].TotalAmount)
 				}
 
@@ -168,12 +145,6 @@ func TestGetTop3ExpenseCategories(t *testing.T) {
 			}
 		})
 	}
-}
-
-const float64EqualityThreshold = 1e-9
-
-func almostEqual(a, b float32) bool {
-	return math.Abs(float64(a)-float64(b)) <= float64EqualityThreshold
 }
 
 func TestFromCSV(t *testing.T) {
@@ -204,7 +175,7 @@ date;amount;category;subcategory
 		}
 
 		e := expenses[0]
-		if e.Amount != 2.82 {
+		if e.Amount != 282 {
 			t.Errorf("expected amount to be 2.82, got %v", e.Amount)
 		}
 
@@ -221,7 +192,7 @@ date;amount;category;subcategory
 		}
 
 		e = expenses[1]
-		if e.Amount != 8.22 {
+		if e.Amount != 822 {
 			t.Errorf("expected amount to be 8.22, got %v", e.Amount)
 		}
 
@@ -253,7 +224,7 @@ date,amount,category,subcategory
 		}
 
 		e := expenses[0]
-		if e.Amount != 2.82 {
+		if e.Amount != 282 {
 			t.Errorf("expected amount to be 2.82, got %v", e.Amount)
 		}
 
@@ -270,7 +241,7 @@ date,amount,category,subcategory
 		}
 
 		e = expenses[1]
-		if e.Amount != 8.22 {
+		if e.Amount != 822 {
 			t.Errorf("expected amount to be 8.22, got %v", e.Amount)
 		}
 
@@ -318,7 +289,7 @@ date;amount;category;subcategory
 		}
 
 		e := expenses[0]
-		if e.Amount != 2.82 {
+		if e.Amount != 282 {
 			t.Errorf("expected amount to be 2.82, got %v", e.Amount)
 		}
 
@@ -335,7 +306,7 @@ date;amount;category;subcategory
 		}
 
 		e = expenses[1]
-		if e.Amount != 8.22 {
+		if e.Amount != 822 {
 			t.Errorf("expected amount to be 8.22, got %v", e.Amount)
 		}
 

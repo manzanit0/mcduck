@@ -36,7 +36,7 @@ func MapExpenses(expenses []mcduck.Expense) (models []ExpenseViewModel) {
 		models = append(models, ExpenseViewModel{
 			ID:          fmt.Sprint(e.ID),
 			Date:        e.Date.Format("2006-01-02"),
-			Amount:      fmt.Sprintf("%0.2f", e.Amount),
+			Amount:      fmt.Sprintf("%0.2f", mcduck.ConvertToDollar(e.Amount)),
 			Category:    strings.Title(e.Category),
 			Subcategory: strings.Title(e.Subcategory),
 			Description: e.Description,
@@ -112,10 +112,16 @@ func (d *ExpensesController) UpdateExpense(c *gin.Context) {
 		date = &d
 	}
 
+	var amount *uint64
+	if payload.Amount != nil {
+		a := mcduck.ConvertToCents(*payload.Amount)
+		amount = &a
+	}
+
 	err = d.Expenses.UpdateExpense(ctx, mcduck.UpdateExpenseRequest{
 		ID:          i,
 		Date:        date,
-		Amount:      payload.Amount,
+		Amount:      amount,
 		Category:    payload.Category,
 		Subcategory: payload.Subcategory,
 		Description: payload.Description,
@@ -164,7 +170,7 @@ func (d *ExpensesController) CreateExpense(c *gin.Context) {
 	expenseID, err := d.Expenses.CreateExpense(ctx, mcduck.CreateExpenseRequest{
 		UserEmail: auth.GetUserEmail(c),
 		Date:      date,
-		Amount:    payload.Amount,
+		Amount:    mcduck.ConvertToCents(payload.Amount),
 		ReceiptID: payload.ReceiptID,
 	})
 	if err != nil {
@@ -217,7 +223,7 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 		return
 	}
 
-	var total float32
+	var total uint64
 	expenses := []*mcduck.Expense{}
 	for _, id := range payload.ExpenseIDs {
 		expense, err := d.Expenses.FindExpense(ctx, int64(id))
@@ -236,7 +242,6 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 			return
 		}
 
-		// FIXME: this operation should not be done with floats.
 		total += expense.Amount
 		expenses = append(expenses, expense)
 	}

@@ -74,7 +74,7 @@ func NewReceiptRepository(dbx *sqlx.DB) *ReceiptRepository {
 }
 
 type CreateReceiptRequest struct {
-	Amount      float64
+	Amount      uint64
 	Description string
 	Vendor      string
 	Image       []byte
@@ -122,7 +122,7 @@ func (r *ReceiptRepository) CreateReceipt(ctx context.Context, input CreateRecei
 			Records: []Expense{{
 				ReceiptID:   record.ID,
 				Date:        input.Date,
-				Amount:      float32(input.Amount),
+				Amount:      input.Amount,
 				UserEmail:   input.Email,
 				Description: input.Description,
 				Category:    "Receipt Upload",
@@ -569,7 +569,7 @@ func (a *AIaugmentor) AugmentCreatedReceipt(ctx context.Context, ev *receiptsevv
 		Records: []Expense{
 			{
 				Date:        parsedTime,
-				Amount:      float32(parsedReceipt.Amount),
+				Amount:      ConvertToCents(float32(parsedReceipt.Amount)),
 				Category:    "Receipt Upload",
 				Subcategory: "",
 				UserEmail:   ev.UserEmail,
