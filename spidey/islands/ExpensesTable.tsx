@@ -1,7 +1,11 @@
 import { JSX } from "preact/jsx-runtime";
 import GenericTable from "../components/GenericTable.tsx";
 import TextInput from "../components/TextInput.tsx";
-import { createExpense, updateExpense } from "../lib/receipts.ts";
+import {
+  createExpense,
+  deleteExpense,
+  updateExpense,
+} from "../lib/receipts.ts";
 import { SerializableExpense, toCents, toTimestamp } from "../lib/types.ts";
 import { Signal } from "@preact/signals";
 import MoneyInput from "../components/MoneyInput.tsx";
@@ -144,8 +148,11 @@ export default function ExpensesTable(props: TableProps) {
             header: <span>Action</span>,
             accessor: (r) => (
               <a
-                href={`receipts/${r.value.id}`}
-                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                class="font-medium text-gray-900 dark:text-gray-500 hover:underline"
+                onClick={async () => {
+                  await deleteExpense(props.url, { id: r.value.id });
+                  location.reload();
+                }}
               >
                 Delete
               </a>
