@@ -69,7 +69,7 @@ export default function Single({ data: { receipt, file } }: PageProps<Props>) {
       <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
         Receipt #{receipt.id}
       </h2>
-      <div class="mt-10 grid grid-cols-3 gap-4 items-center">
+      <div class="mt-10 sm:grid sm:grid-cols-3 sm:gap-4 items-center">
         <div class="col-span-1 h-full">{receiptView}</div>
         <div class="col-span-2 p-5">
           <ReceiptBreakdown receipt={receipt} url={url} />
