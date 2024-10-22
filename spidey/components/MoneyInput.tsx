@@ -36,7 +36,6 @@ export default function MoneyInput({ amount, currency, onfocusout }: Props) {
           }}
           onInput={(e) => {
             const value = e.currentTarget.value;
-            console.log("onInput ", value);
             const valid = /^(\d{1,})(\.\d{1,2})?$/.test(value);
             if (!valid) {
               focusRingClass.value = "focus:ring-red-600";

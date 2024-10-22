@@ -8,5 +8,5 @@ export default function FormattedMoney({ amount, currency }: Props) {
     style: "currency",
     currency: currency,
   }).format(amount / 100);
-  return <span>{fmt}</span>;
+  return <span class="block text-gray-900 sm:text-sm sm:leading-6">{fmt}</span>;
 }

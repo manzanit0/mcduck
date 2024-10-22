@@ -1,36 +1,45 @@
-import { RouteContext } from "$fresh/server.ts";
+import { Handlers, PageProps } from "$fresh/server.ts";
 import { encodeBase64 } from "$std/encoding/base64.ts";
-import ExpensesTable from "../../islands/ExpensesTable.tsx";
+import ReceiptBreakdown from "../../islands/ReceiptBreakdown.tsx";
 import { createPromiseClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { ReceiptsService } from "../../gen/api/receipts.v1/receipts_connect.ts";
 import {
-  mapExpensesToSerializable,
   mapFullReceiptToSerializable,
+  SerializableFullReceipt,
 } from "../../lib/types.ts";
-
-import { AuthState } from "../../lib/auth.ts";
-import ReceiptForm from "../../islands/ReceiptForm.tsx";
 
 const url = Deno.env.get("API_HOST") || "";
 
-export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
-  console.log("get receipt");
-  const transport = createConnectTransport({
-    baseUrl: url!,
-  });
+const transport = createConnectTransport({
+  baseUrl: url,
+});
 
-  const client = createPromiseClient(ReceiptsService, transport);
+const client = createPromiseClient(ReceiptsService, transport);
 
-  const res = await client.getReceipt(
-    { id: BigInt(ctx.params.id) },
-    {
-      headers: { authorization: `Bearer ${ctx.state.authToken}` },
+export const handler: Handlers = {
+  async GET(_, ctx) {
+    if (!ctx.state || !ctx.state.loggedIn) {
+      return ctx.renderNotFound({});
     }
-  );
 
-  const receipt = mapFullReceiptToSerializable(res.receipt!);
-  const encoded = encodeBase64(res.receipt!.file);
+    const res = await client.getReceipt(
+      { id: BigInt(ctx.params.id) },
+      { headers: { authorization: `Bearer ${ctx.state.authToken}` } }
+    );
+
+    const receipt = mapFullReceiptToSerializable(res.receipt!);
+    return await ctx.render({ receipt: receipt, file: res.receipt!.file });
+  },
+};
+
+interface Props {
+  receipt: SerializableFullReceipt;
+  file: Uint8Array;
+}
+
+export default function Single({ data: { receipt, file } }: PageProps<Props>) {
+  const encoded = encodeBase64(file);
 
   let receiptView = (
     <img
@@ -40,7 +49,7 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
     />
   );
 
-  const contentType = detectContentType(res.receipt!.file);
+  const contentType = detectContentType(file);
   if (contentType === "application/pdf") {
     receiptView = (
       <embed
@@ -58,25 +67,12 @@ export default async function Single(_: Request, ctx: RouteContext<AuthState>) {
   return (
     <div class="m-6 h-screen">
       <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-        Receipt #{ctx.params.id}
+        Receipt #{receipt.id}
       </h2>
       <div class="mt-10 grid grid-cols-3 gap-4 items-center">
         <div class="col-span-1 h-full">{receiptView}</div>
         <div class="col-span-2 p-5">
-          <ReceiptForm receipt={receipt} url={url} />
-          <div class="mt-10">
-            <h2 class="text-base font-semibold leading-7 text-gray-900">
-              Expenses
-            </h2>
-            <div class="mt-2">
-              <ExpensesTable
-                expenses={mapExpensesToSerializable(res.receipt!.expenses)}
-                url={url}
-                receiptId={res.receipt!.id}
-                receiptDate={res.receipt!.date!.toDate().toISOString()}
-              />
-            </div>
-          </div>
+          <ReceiptBreakdown receipt={receipt} url={url} />
         </div>
       </div>
     </div>

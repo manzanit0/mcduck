@@ -11,7 +11,6 @@ export interface SerializableReceipt {
   vendor: string;
   date?: string;
   totalAmount: bigint;
-  // expenses: SerializableExpense[];
 }
 
 export interface SerializableFullReceipt {
@@ -19,7 +18,6 @@ export interface SerializableFullReceipt {
   status: number;
   vendor: string;
   date?: string;
-  totalAmount: bigint;
   expenses: SerializableExpense[];
 }
 
@@ -54,7 +52,6 @@ export function mapFullReceiptToSerializable(
     status: r.status,
     vendor: r.vendor,
     date: r.date?.toDate().toISOString(),
-    totalAmount: r.expenses.reduce((acc, ex) => (acc += ex.amount), 0n),
     expenses: mapExpensesToSerializable(r.expenses),
   };
 }

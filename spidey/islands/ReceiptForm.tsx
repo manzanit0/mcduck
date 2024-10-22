@@ -3,23 +3,29 @@ import DatePicker from "../components/DatePicker.tsx";
 import TextInput from "../components/TextInput.tsx";
 import Label from "../components/Label.tsx";
 import ReceiptStatusDropdown from "./ReceiptStatusDropdown.tsx";
-import { SerializableReceipt } from "../lib/types.ts";
+import { SerializableFullReceipt } from "../lib/types.ts";
 import { JSX } from "preact/jsx-runtime";
 import { Timestamp } from "@bufbuild/protobuf";
 import { ReceiptStatus } from "../gen/api/receipts.v1/receipts_pb.ts";
 import { updateReceipt } from "../lib/receipts.ts";
+import FormattedMoney from "../components/FormattedMoney.tsx";
 
 interface ReceiptFormProps {
-  receipt: SerializableReceipt;
+  totalAmount: Signal<number>;
+  receipt: SerializableFullReceipt;
   url: string;
 }
 
-export default function ReceiptForm({ receipt, url }: ReceiptFormProps) {
+export default function ReceiptForm({
+  receipt,
+  url,
+  totalAmount,
+}: ReceiptFormProps) {
   const r = useSignal(receipt);
 
   const updateVendor = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<SerializableReceipt>
+    r: Signal<SerializableFullReceipt>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -38,7 +44,7 @@ export default function ReceiptForm({ receipt, url }: ReceiptFormProps) {
 
   const updateDate = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<SerializableReceipt>
+    r: Signal<SerializableFullReceipt>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -60,7 +66,7 @@ export default function ReceiptForm({ receipt, url }: ReceiptFormProps) {
 
   const updateStatus = async (
     status: number,
-    r: Signal<SerializableReceipt>
+    r: Signal<SerializableFullReceipt>
   ) => {
     if (status === r.value.status) {
       return;
@@ -106,6 +112,12 @@ export default function ReceiptForm({ receipt, url }: ReceiptFormProps) {
             value={r.value.date!.split("T")[0]}
             onChange={(e) => updateDate(e, r)}
           />
+        </div>
+        <div class="mt-2 col-span-1">
+          <Label>Total Amount</Label>
+          <div class="relative mt-4 rounded-md shadow-sm">
+            <FormattedMoney currency="EUR" amount={totalAmount.value} />
+          </div>
         </div>
       </div>
     </div>

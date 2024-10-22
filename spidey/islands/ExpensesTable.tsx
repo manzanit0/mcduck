@@ -3,23 +3,17 @@ import GenericTable from "../components/GenericTable.tsx";
 import TextInput from "../components/TextInput.tsx";
 import { createExpense, updateExpense } from "../lib/receipts.ts";
 import { SerializableExpense, toCents, toTimestamp } from "../lib/types.ts";
-import { Signal, useSignal } from "@preact/signals";
+import { Signal } from "@preact/signals";
 import MoneyInput from "../components/MoneyInput.tsx";
 
 interface TableProps {
   receiptId: bigint;
   receiptDate: string;
-  expenses: SerializableExpense[];
+  expenses: Signal<Signal<SerializableExpense>[]>;
   url: string;
 }
 
 export default function ExpensesTable(props: TableProps) {
-  const mapped = useSignal(
-    props.expenses.map((x) => {
-      return useSignal(x);
-    })
-  );
-
   const addExpense = async () => {
     await createExpense(props.url, {
       receiptId: props.receiptId,
@@ -107,7 +101,7 @@ export default function ExpensesTable(props: TableProps) {
   return (
     <div class="sm:rounded-lg">
       <GenericTable
-        data={mapped.value}
+        data={props.expenses.value}
         columns={[
           {
             header: <span>Category</span>,
