@@ -1,11 +1,11 @@
 import { JSX } from "preact/jsx-runtime";
 import Checkbox from "../components/Checkbox.tsx";
-import FormattedMoney from "../components/FormattedMoney.tsx";
 import GenericTable from "../components/GenericTable.tsx";
 import TextInput from "../components/TextInput.tsx";
 import { createExpense, updateExpense } from "../lib/receipts.ts";
-import { SerializableExpense, toTimestamp } from "../lib/types.ts";
+import { SerializableExpense, toCents, toTimestamp } from "../lib/types.ts";
 import { Signal, useSignal } from "@preact/signals";
+import MoneyInput from "../components/MoneyInput.tsx";
 
 interface TableProps {
   receiptId: bigint;
@@ -107,6 +107,21 @@ export default function ExpensesTable(props: TableProps) {
     console.log("updated description to", value);
   };
 
+  const updateAmount = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+    r: Signal<CheckeableExpense>
+  ) => {
+    if (!e.currentTarget || e.currentTarget.value === "") {
+      return;
+    }
+
+    const value = BigInt(toCents(e.currentTarget.valueAsNumber));
+    r.value = { ...r.value, amount: value };
+    await updateExpense(props.url, { id: r.value.id, amount: r.value.amount });
+
+    console.log("updated amount to", value);
+  };
+
   return (
     <div class="sm:rounded-lg">
       <GenericTable
@@ -156,7 +171,11 @@ export default function ExpensesTable(props: TableProps) {
           {
             header: <span>Amount</span>,
             accessor: (r) => (
-              <FormattedMoney currency="EUR" amount={Number(r.value.amount)} />
+              <MoneyInput
+                currency="EUR"
+                amount={Number(r.value.amount) / 100}
+                onfocusout={(e) => updateAmount(e, r)}
+              />
             ),
           },
           {
