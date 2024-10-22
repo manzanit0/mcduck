@@ -1,5 +1,4 @@
 import { JSX } from "preact/jsx-runtime";
-import Checkbox from "../components/Checkbox.tsx";
 import GenericTable from "../components/GenericTable.tsx";
 import TextInput from "../components/TextInput.tsx";
 import { createExpense, updateExpense } from "../lib/receipts.ts";
@@ -14,29 +13,12 @@ interface TableProps {
   url: string;
 }
 
-interface CheckeableExpense extends SerializableExpense {
-  checked: boolean;
-}
-
 export default function ExpensesTable(props: TableProps) {
   const mapped = useSignal(
     props.expenses.map((x) => {
-      return useSignal<CheckeableExpense>({
-        ...x,
-        checked: false,
-      });
+      return useSignal(x);
     })
   );
-
-  const globallySelected = useSignal(false);
-
-  const checkExpenses = () => {
-    globallySelected.value = !globallySelected.value;
-
-    for (const r of mapped.value) {
-      r.value.checked = globallySelected.value;
-    }
-  };
 
   const addExpense = async () => {
     await createExpense(props.url, {
@@ -64,7 +46,7 @@ export default function ExpensesTable(props: TableProps) {
 
   const updateCategory = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<CheckeableExpense>
+    r: Signal<SerializableExpense>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -79,7 +61,7 @@ export default function ExpensesTable(props: TableProps) {
 
   const updateSubcategory = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<CheckeableExpense>
+    r: Signal<SerializableExpense>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -94,7 +76,7 @@ export default function ExpensesTable(props: TableProps) {
 
   const updateDescription = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<CheckeableExpense>
+    r: Signal<SerializableExpense>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -109,7 +91,7 @@ export default function ExpensesTable(props: TableProps) {
 
   const updateAmount = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
-    r: Signal<CheckeableExpense>
+    r: Signal<SerializableExpense>
   ) => {
     if (!e.currentTarget || e.currentTarget.value === "") {
       return;
@@ -127,20 +109,6 @@ export default function ExpensesTable(props: TableProps) {
       <GenericTable
         data={mapped.value}
         columns={[
-          {
-            header: (
-              <Checkbox
-                onInput={checkExpenses}
-                checked={globallySelected.value}
-              />
-            ),
-            accessor: (r) => (
-              <Checkbox
-                checked={r.value.checked}
-                onInput={() => (r.value.checked = !r.value.checked)}
-              />
-            ),
-          },
           {
             header: <span>Category</span>,
             accessor: (r) => (
