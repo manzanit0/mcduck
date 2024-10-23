@@ -1,6 +1,6 @@
 [build]
-builder = "nixpacks"
-buildCommand = "go build -o bin/api ./cmd/api"
+builder = "dockerfile"
+dockerfilePath= "Dockerfile"
 watchPatterns = [
   "cmd/api/**",
   "pkg/**", 
@@ -9,11 +9,11 @@ watchPatterns = [
   "railway/bot.toml", 
   "go.mod", 
   "go.sum",
+  "Dockerfile",
 ]
 
 [deploy]
 numReplicas = 1 
-startCommand = "bin/api"
 healthcheckPath = "/ping"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
