@@ -63,7 +63,7 @@ func telegramWebhookController(tgramClient tgram.Client, uploader mcduck.Receipt
 		}
 
 		span.SetAttributes(
-			attribute.Int("mduck.telegram.chat_id", r.GetChatID()),
+			attribute.Int64("mduck.telegram.chat_id", r.GetChatID()),
 			attribute.String("mduck.telegram.language_code", r.GetFromLanguageCode()),
 		)
 

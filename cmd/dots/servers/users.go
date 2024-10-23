@@ -36,7 +36,7 @@ func (s *usersServer) GetUser(ctx context.Context, req *connect.Request[usersv1.
 	} else if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "failed to get user", "error", err.Error())
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to get receipt: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to get user: %w", err))
 	}
 
 	res := connect.NewResponse(&usersv1.GetUserResponse{

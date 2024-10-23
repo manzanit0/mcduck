@@ -61,7 +61,7 @@ func UploadReceipt(ctx context.Context, tgramClient tgram.Client, uploader mcduc
 		return tgram.NewHTMLResponse("empty file", r.GetChatID())
 	}
 
-	id, err := uploader.UploadFromChat(ctx, fileData, int64(r.GetChatID()))
+	id, err := uploader.UploadFromChat(ctx, fileData, r.GetChatID())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "Upload receipt", "error", err.Error())

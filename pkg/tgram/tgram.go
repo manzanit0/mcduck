@@ -9,13 +9,13 @@ import (
 )
 
 type WebhookRequest struct {
-	UpdateID      int      `json:"update_id"`
+	UpdateID      int64    `json:"update_id"`
 	Message       *Message `json:"message"`
 	EditedMessage *Message `json:"edited_message"`
 }
 
 type WebhookResponse struct {
-	ChatID      int         `json:"chat_id,omitempty"`
+	ChatID      int64       `json:"chat_id,omitempty"`
 	Text        string      `json:"text,omitempty"`
 	ParseMode   ParseMode   `json:"parse_mode,omitempty"`
 	Method      string      `json:"method,omitempty"`
@@ -31,7 +31,7 @@ type InlineKeyboardElement struct {
 	CallbackData string `json:"callback_data,omitempty"`
 }
 
-func NewMarkdownResponse(text string, chatID int) *WebhookResponse {
+func NewMarkdownResponse(text string, chatID int64) *WebhookResponse {
 	return &WebhookResponse{
 		ChatID:    chatID,
 		Text:      text,
@@ -40,7 +40,7 @@ func NewMarkdownResponse(text string, chatID int) *WebhookResponse {
 	}
 }
 
-func NewHTMLResponse(text string, chatID int) *WebhookResponse {
+func NewHTMLResponse(text string, chatID int64) *WebhookResponse {
 	return &WebhookResponse{
 		ChatID:    chatID,
 		Text:      text,
@@ -74,7 +74,7 @@ func (w WebhookRequest) GetFromUsername() string {
 	return ""
 }
 
-func (w WebhookRequest) GetFromID() int {
+func (w WebhookRequest) GetFromID() int64 {
 	if w.Message != nil {
 		return w.Message.From.ID
 	}
@@ -122,7 +122,7 @@ func (w WebhookRequest) GetFromLanguageCode() string {
 	return ""
 }
 
-func (w WebhookRequest) GetChatID() int {
+func (w WebhookRequest) GetChatID() int64 {
 	if w.Message != nil {
 		return w.Message.Chat.ID
 	}
@@ -135,7 +135,7 @@ func (w WebhookRequest) GetChatID() int {
 }
 
 type User struct {
-	ID           int    `json:"id"`
+	ID           int64  `json:"id"`
 	IsBot        bool   `json:"is_bot"`
 	FirstName    string `json:"first_name"`
 	LastName     string `json:"last_name"`
@@ -145,7 +145,7 @@ type User struct {
 
 // Chat represents a chat.
 type Chat struct {
-	ID        int     `json:"id"`
+	ID        int64   `json:"id"`
 	FirstName *string `json:"first_name"`
 	LastName  *string `json:"last_name"`
 	Username  *string `json:"username"`
@@ -154,10 +154,10 @@ type Chat struct {
 
 // Message represents a message.
 type Message struct {
-	MessageID int         `json:"message_id"`
+	MessageID int64       `json:"message_id"`
 	From      *User       `json:"from"`
 	Chat      Chat        `json:"chat"`
-	Date      int         `json:"date"`
+	Date      int64       `json:"date"`
 	Text      *string     `json:"text"`
 	Document  *Document   `json:"document"`
 	Photos    []PhotoSize `json:"photo"`
@@ -177,8 +177,8 @@ type PhotoSize struct {
 	FileID       string `json:"file_id"`
 	FileUniqueID string `json:"file_unique_id"`
 	FileSize     *int64 `json:"file_size"`
-	Width        int    `json:"width"`
-	Height       int    `json:"height"`
+	Width        int64  `json:"width"`
+	Height       int64  `json:"height"`
 }
 
 func NewMessage(chatID, text string) Message {
@@ -258,7 +258,7 @@ type GetFileResponse struct {
 type File struct {
 	ID       string `json:"file_id"`
 	UniqueID string `json:"file_unique_id"`
-	Size     int    `json:"file_size"`
+	Size     int64  `json:"file_size"`
 	Path     string `json:"file_path"`
 }
 
