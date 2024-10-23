@@ -78,7 +78,7 @@ tasks:
         sh: railway whoami
     vars:
       DATABASE_URL:
-        sh: railway variables -s mcduck --json | jq -r .DATABASE_URL
+        sh: railway variables -s api --json | jq -r .DATABASE_URL
     cmds:
       - pgcli "{{.DATABASE_URL}}"
 
@@ -91,15 +91,15 @@ tasks:
         sh: railway whoami
     vars:
       PGHOST:
-        sh: railway variables -s mcduck --json | jq -r .PGHOST
+        sh: railway variables -s api --json | jq -r .PGHOST
       PGPORT:
-        sh: railway variables -s mcduck --json | jq -r .PGPORT
+        sh: railway variables -s api --json | jq -r .PGPORT
       PGDATABASE:
-        sh: railway variables -s mcduck --json | jq -r .PGDATABASE
+        sh: railway variables -s api --json | jq -r .PGDATABASE
       PGUSER:
-        sh: railway variables -s mcduck --json | jq -r .PGUSER
+        sh: railway variables -s api --json | jq -r .PGUSER
       PGPASSWORD:
-        sh: railway variables -s mcduck --json | jq -r .PGPASSWORD
+        sh: railway variables -s api --json | jq -r .PGPASSWORD
     cmds:
       - |
         docker run --rm -v `pwd`/migrations:/flyway/sql flyway/flyway:7.14.0 \
