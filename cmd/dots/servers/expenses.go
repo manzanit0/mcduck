@@ -88,7 +88,7 @@ func (e *expensesServer) DeleteExpense(ctx context.Context, req *connect.Request
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(attribute.Int("expense.id", int(req.Msg.Id)))
 
-	err := e.Expenses.DeleteExpense(ctx, int64(req.Msg.Id))
+	err := e.Expenses.DeleteExpense(ctx, req.Msg.Id)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to delete expense", "error", err.Error())
 		span.SetStatus(codes.Error, err.Error())
@@ -108,7 +108,7 @@ func (e *expensesServer) ListExpenses(context.Context, *connect.Request[expenses
 func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request[expensesv1.UpdateExpenseRequest]) (*connect.Response[expensesv1.UpdateExpenseResponse], error) {
 	ctx, span := xtrace.GetSpan(ctx)
 
-	_, err := e.Expenses.FindExpense(ctx, int64(req.Msg.Id))
+	_, err := e.Expenses.FindExpense(ctx, req.Msg.Id)
 	if err != nil && errors.Is(err, sql.ErrNoRows) {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("expense with id %d doesn't exist", req.Msg.Id))
@@ -124,7 +124,7 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 	}
 
 	err = e.Expenses.UpdateExpense(ctx, mcduck.UpdateExpenseRequest{
-		ID:          int64(req.Msg.Id),
+		ID:          req.Msg.Id,
 		Date:        date,
 		Amount:      req.Msg.Amount,
 		Category:    req.Msg.Category,
@@ -139,7 +139,7 @@ func (e *expensesServer) UpdateExpense(ctx context.Context, req *connect.Request
 	}
 
 	// TODO: merge this with the UpdateExpense SQL call via RETURNING.
-	exp, err := e.Expenses.FindExpense(ctx, int64(req.Msg.Id))
+	exp, err := e.Expenses.FindExpense(ctx, req.Msg.Id)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unable to find expense: %w", err))

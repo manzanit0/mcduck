@@ -92,7 +92,7 @@ func (d *ExpensesController) UpdateExpense(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	i, err := strconv.ParseInt(id, 10, 64)
+	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "failed to parse id", "error", err.Error())
@@ -144,7 +144,7 @@ type CreateExpensePayload struct {
 }
 
 type CreateExpenseResponse struct {
-	ID int64 `json:"id"`
+	ID uint64 `json:"id"`
 }
 
 func (d *ExpensesController) CreateExpense(c *gin.Context) {
@@ -187,7 +187,7 @@ func (d *ExpensesController) DeleteExpense(c *gin.Context) {
 	ctx, span := xtrace.GetSpan(c.Request.Context())
 
 	id := c.Param("id")
-	i, err := strconv.ParseInt(id, 10, 64)
+	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "failed to parse expense id", "error", err.Error())
@@ -207,8 +207,8 @@ func (d *ExpensesController) DeleteExpense(c *gin.Context) {
 }
 
 type MergeExpensesPayload struct {
-	ReceiptID  uint64  `json:"receipt_id,string"`
-	ExpenseIDs []int64 `json:"expense_ids"`
+	ReceiptID  uint64   `json:"receipt_id,string"`
+	ExpenseIDs []uint64 `json:"expense_ids"`
 }
 
 func (d *ExpensesController) MergeExpenses(c *gin.Context) {
@@ -226,7 +226,7 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 	var total uint64
 	expenses := []*mcduck.Expense{}
 	for _, id := range payload.ExpenseIDs {
-		expense, err := d.Expenses.FindExpense(ctx, int64(id))
+		expense, err := d.Expenses.FindExpense(ctx, id)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			slog.ErrorContext(ctx, "failed to find expense", "error", err.Error())
@@ -261,7 +261,7 @@ func (d *ExpensesController) MergeExpenses(c *gin.Context) {
 	}
 
 	for _, id := range payload.ExpenseIDs {
-		err = d.Expenses.DeleteExpense(ctx, int64(id))
+		err = d.Expenses.DeleteExpense(ctx, id)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			slog.ErrorContext(ctx, "failed to delete expense", "error", err.Error())

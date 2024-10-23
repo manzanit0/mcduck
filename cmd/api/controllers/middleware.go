@@ -39,7 +39,7 @@ func ForceAuthentication(c *gin.Context) {
 func ExpenseOwnershipWall(repo *mcduck.ExpenseRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		i, err := strconv.ParseInt(id, 10, 64)
+		i, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unable to parse expense id: %s", err.Error())})
 			return

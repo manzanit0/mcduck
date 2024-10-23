@@ -284,7 +284,7 @@ func CreateExpenses(ctx context.Context, tx QueryExecutor, e ExpensesBatch) erro
 	return nil
 }
 
-func (r *ExpenseRepository) FindExpense(ctx context.Context, id int64) (*Expense, error) {
+func (r *ExpenseRepository) FindExpense(ctx context.Context, id uint64) (*Expense, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Find Expense by ID")
 	defer span.End()
 
@@ -311,7 +311,7 @@ func (r *ExpenseRepository) FindExpense(ctx context.Context, id int64) (*Expense
 }
 
 type UpdateExpenseRequest struct {
-	ID          int64
+	ID          uint64
 	Date        *time.Time
 	Amount      *uint64
 	Category    *string
@@ -387,7 +387,7 @@ type CreateExpenseRequest struct {
 	Description *string
 }
 
-func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRequest) (int64, error) {
+func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRequest) (uint64, error) {
 	ctx, span := xtrace.StartSpan(ctx, "Create Expense")
 	defer span.End()
 
@@ -405,7 +405,7 @@ func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRe
 	}
 
 	record := struct {
-		ID int64 `db:"id"`
+		ID uint64 `db:"id"`
 	}{}
 
 	err = r.db.GetContext(ctx, &record, query, args...)
@@ -416,7 +416,7 @@ func (r *ExpenseRepository) CreateExpense(ctx context.Context, e CreateExpenseRe
 	return record.ID, nil
 }
 
-func (r *ExpenseRepository) DeleteExpense(ctx context.Context, id int64) error {
+func (r *ExpenseRepository) DeleteExpense(ctx context.Context, id uint64) error {
 	ctx, span := xtrace.StartSpan(ctx, "Delete Expense")
 	defer span.End()
 
