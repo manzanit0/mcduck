@@ -65,7 +65,7 @@ func run() error {
 		return err
 	}
 
-	otelInterceptor, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutMetrics())
+	otelInterceptor, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote())
 	if err != nil {
 		return err
 	}
