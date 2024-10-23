@@ -5,6 +5,13 @@ x-postgres-connection: &postgres-connection
   PGHOST: postgresql
   PGPORT: 5432
 
+x-otel-connection: &otel-connection
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+
+x-nats-connection: &nats-connection
+  NATS_URL: nats://nats:4222
+
 services:
   nats:
     image: nats:2.10
@@ -53,12 +60,10 @@ services:
     ports:
       - 8080:8080
     environment:
-      <<: *postgres-connection
+      <<: [*postgres-connection, *otel-connection]
       PUBLIC_DOTS_HOST: http://localhost:8083
       PRIVATE_DOTS_HOST: http://dots:8080
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
-      OTEL_EXPORTER_OTLP_INSECURE: "true"
       OTEL_RESOURCE_ATTRIBUTES: service.name=mcduck,service.version=latest,deployment.environment=local
     networks:
       - mcduck
@@ -74,12 +79,9 @@ services:
     ports:
       - 8083:8080
     environment:
-      <<: *postgres-connection
-      NATS_URL: nats://nats:4222
+      <<: [*postgres-connection, *otel-connection, *nats-connection]
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       ALLOWED_ORIGINS: "*/*"
-      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
-      OTEL_EXPORTER_OTLP_INSECURE: "true"
       OTEL_RESOURCE_ATTRIBUTES: service.name=dots,service.version=latest,deployment.environment=local
     volumes:
       - ./:/app
@@ -117,12 +119,11 @@ services:
     ports:
       - 8081:8080
     environment:
-      - MCDUCK_HOST=http://service:8080
-      - PRIVATE_DOTS_HOST=http://dots:8080
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
-      - OTEL_EXPORTER_OTLP_INSECURE=true
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=bot,service.version=latest,deployment.environment=local
+      <<: [*postgres-connection, *otel-connection]
+      MCDUCK_HOST: http://service:8080
+      PRIVATE_DOTS_HOST: http://dots:8080
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OTEL_RESOURCE_ATTRIBUTES: service.name=bot,service.version=latest,deployment.environment=local
     networks:
       - mcduck
     depends_on:
@@ -157,14 +158,11 @@ services:
     ports:
       - 8082:8080
     environment:
-      <<: *postgres-connection
+      <<: [*postgres-connection, *otel-connection, *nats-connection]
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
-      OTEL_EXPORTER_OTLP_INSECURE: "true"
       OTEL_RESOURCE_ATTRIBUTES: service.name=parser,service.version=latest,deployment.environment=local
-      NATS_URL: nats://nats:4222
     networks:
       - mcduck
     depends_on:

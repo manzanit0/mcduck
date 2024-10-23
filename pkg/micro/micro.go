@@ -16,24 +16,26 @@ import (
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
+type ShutdownFunc func(context.Context) error
+
 type Service struct {
-	Name   string
-	Engine *gin.Engine
-	tp     *xtrace.Provider
+	Name          string
+	Engine        *gin.Engine
+	shutdownFuncs []ShutdownFunc
 }
 
 func NewGinService(name string) (Service, error) {
 	xlog.InitSlog()
 
-	tp, err := xtrace.TracerFromEnv(context.Background(), name)
+	shutdownOTel, err := xtrace.SetupOTelHTTP(context.Background())
 	if err != nil {
 		return Service{}, fmt.Errorf("get tracer from env %w", err)
 	}
 
 	r := gin.Default()
 	r.Use(xlog.EnhanceContext)
-	r.Use(tp.TraceRequests())
-	r.Use(tp.EnhanceTraceMetadata())
+	r.Use(xtrace.GinTraceRequests(name))
+	r.Use(xtrace.GinEnhanceTraceAttributes())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -41,11 +43,18 @@ func NewGinService(name string) (Service, error) {
 		})
 	})
 
-	return Service{Name: name, Engine: r, tp: tp}, nil
+	return Service{Name: name, Engine: r, shutdownFuncs: []ShutdownFunc{shutdownOTel}}, nil
 }
 
 func (s *Service) Run() error {
-	defer s.tp.Shutdown(context.Background())
+	for _, fn := range s.shutdownFuncs {
+		defer func() {
+			err := fn(context.Background())
+			if err != nil {
+				slog.Error("error shutting down thing", "error", err.Error())
+			}
+		}()
+	}
 
 	return RunGracefully(s.Engine)
 }

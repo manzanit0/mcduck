@@ -44,18 +44,24 @@ func main() {
 func run() error {
 	xlog.InitSlog()
 
-	tp, err := xtrace.TracerFromEnv(context.Background(), serviceName)
+	shutdown, err := xtrace.SetupOTelHTTP(context.Background())
 	if err != nil {
 		return err
 	}
-	defer tp.Shutdown(context.Background())
+
+	defer func() {
+		err = shutdown(context.Background())
+		if err != nil {
+			slog.Error("error shutting down OTel SDK")
+		}
+	}()
 
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
 	r.Use(xlog.EnhanceContext)
-	r.Use(tp.TraceRequests())
-	r.Use(tp.EnhanceTraceMetadata())
+	r.Use(xtrace.GinTraceRequests(serviceName))
+	r.Use(xtrace.GinEnhanceTraceAttributes())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

@@ -28,8 +28,6 @@ import (
 	"github.com/manzanit0/mcduck/pkg/xtrace"
 )
 
-const serviceName = "dots"
-
 func main() {
 	if err := run(); err != nil {
 		slog.Error("exiting server", "error", err.Error())
@@ -40,11 +38,17 @@ func main() {
 func run() error {
 	xlog.InitSlog()
 
-	tp, err := xtrace.TracerFromEnv(context.Background(), serviceName)
+	shutdown, err := xtrace.SetupOTelHTTP(context.Background())
 	if err != nil {
 		return err
 	}
-	defer tp.Shutdown(context.Background())
+
+	defer func() {
+		err = shutdown(context.Background())
+		if err != nil {
+			slog.Error("error shutting down OTel SDK")
+		}
+	}()
 
 	dbx, err := xsql.OpenFromEnv()
 	if err != nil {
