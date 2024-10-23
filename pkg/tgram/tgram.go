@@ -122,6 +122,18 @@ func (w WebhookRequest) GetFromLanguageCode() string {
 	return ""
 }
 
+func (w WebhookRequest) GetChatID() int {
+	if w.Message != nil {
+		return w.Message.Chat.ID
+	}
+
+	if w.EditedMessage != nil {
+		return w.EditedMessage.Chat.ID
+	}
+
+	return 0
+}
+
 type User struct {
 	ID           int    `json:"id"`
 	IsBot        bool   `json:"is_bot"`

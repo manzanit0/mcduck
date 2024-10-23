@@ -54,19 +54,19 @@ func UploadReceipt(ctx context.Context, tgramClient tgram.Client, uploader mcduc
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "tgram.DownloadFile:", "error", err.Error())
-		return tgram.NewHTMLResponse(fmt.Sprintf("unable to download file from Telegram servers: %s", err.Error()), r.GetFromID())
+		return tgram.NewHTMLResponse(fmt.Sprintf("unable to download file from Telegram servers: %s", err.Error()), r.GetChatID())
 	}
 
 	if len(fileData) == 0 {
-		return tgram.NewHTMLResponse("empty file", r.GetFromID())
+		return tgram.NewHTMLResponse("empty file", r.GetChatID())
 	}
 
-	id, err := uploader.UploadFromChat(ctx, fileData, int64(r.GetFromID()))
+	id, err := uploader.UploadFromChat(ctx, fileData, int64(r.GetChatID()))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		slog.ErrorContext(ctx, "Upload receipt", "error", err.Error())
-		return tgram.NewHTMLResponse(fmt.Sprintf("unable to upload receipt: %s", err.Error()), r.GetFromID())
+		return tgram.NewHTMLResponse(fmt.Sprintf("unable to upload receipt: %s", err.Error()), r.GetChatID())
 	}
 
-	return tgram.NewHTMLResponse(fmt.Sprintf("Receipt submitted for processing. It's ID is %d.", id), r.GetFromID())
+	return tgram.NewHTMLResponse(fmt.Sprintf("Receipt submitted for processing. It's ID is %d.", id), r.GetChatID())
 }

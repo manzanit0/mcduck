@@ -63,7 +63,7 @@ func telegramWebhookController(tgramClient tgram.Client, uploader mcduck.Receipt
 		}
 
 		span.SetAttributes(
-			attribute.Int("mduck.telegram.chat_id", r.GetFromID()),
+			attribute.Int("mduck.telegram.chat_id", r.GetChatID()),
 			attribute.String("mduck.telegram.language_code", r.GetFromLanguageCode()),
 		)
 
@@ -84,7 +84,7 @@ func telegramWebhookController(tgramClient tgram.Client, uploader mcduck.Receipt
 		default:
 			span.SetAttributes(attribute.String("mduck.telegram.command", "unknown"))
 
-			res := tgram.NewMarkdownResponse("Hey\\! Just send me a picture with a receipt and I will do the rest\\!", r.GetFromID())
+			res := tgram.NewMarkdownResponse("Hey\\! Just send me a picture with a receipt and I will do the rest\\!", r.GetChatID())
 			c.JSON(http.StatusOK, res)
 		}
 	}

@@ -15,10 +15,10 @@ func LoginLink(ctx context.Context, r *tgram.WebhookRequest) *tgram.WebhookRespo
 	defer span.End()
 
 	host := os.Getenv("MCDUCK_HOST")
-	id := url.QueryEscape(fmt.Sprint(r.GetFromID()))
+	id := url.QueryEscape(fmt.Sprint(r.GetChatID()))
 	link := fmt.Sprintf("https://%s/connect?tgram=%s", host, id)
 
-	res := tgram.NewMarkdownResponse(fmt.Sprintf("To allow me access to your data, log in the portal: %s", link), r.GetFromID())
+	res := tgram.NewMarkdownResponse(fmt.Sprintf("To allow me access to your data, log in the portal: %s", link), r.GetChatID())
 	res.ParseMode = tgram.ParseModeMarkdownV1
 	return res
 }
