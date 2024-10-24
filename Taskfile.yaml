@@ -64,7 +64,7 @@ tasks:
       - msg: Have you logged in to the railway CLI?
         sh: railway whoami
     cmds:
-      - railway up -s mcduck --detach
+      - railway up -s api --detach
       - railway up -s tgram-bot --detach
       - railway up -s parser --detach
       - railway up -s dots --detach
@@ -119,15 +119,15 @@ tasks:
         sh: railway whoami
     vars:
       PGHOST:
-        sh: railway variables -s mcduck --json | jq -r .PGHOST
+        sh: railway variables -s api --json | jq -r .PGHOST
       PGPORT:
-        sh: railway variables -s mcduck --json | jq -r .PGPORT
+        sh: railway variables -s api --json | jq -r .PGPORT
       PGDATABASE:
-        sh: railway variables -s mcduck --json | jq -r .PGDATABASE
+        sh: railway variables -s api --json | jq -r .PGDATABASE
       PGUSER:
-        sh: railway variables -s mcduck --json | jq -r .PGUSER
+        sh: railway variables -s api --json | jq -r .PGUSER
       PGPASSWORD:
-        sh: railway variables -s mcduck --json | jq -r .PGPASSWORD
+        sh: railway variables -s api --json | jq -r .PGPASSWORD
     cmds:
       - |
         docker run --rm -v `pwd`/migrations:/flyway/sql flyway/flyway:7.14.0 \

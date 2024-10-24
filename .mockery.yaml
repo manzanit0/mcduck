@@ -6,9 +6,6 @@ outpkg: "{{.PackageName}}mock"
 filename: "mock_{{.InterfaceNameSnake}}.go"
 all: True
 packages:
-  github.com/manzanit0/mcduck/internal/client:
-    config:
-      recursive: True
   github.com/manzanit0/mcduck/pkg/tgram:
     config:
       recursive: true
