@@ -84,6 +84,13 @@ func telegramWebhookController(tgramClient tgram.Client, uploader mcduck.Receipt
 		default:
 			span.SetAttributes(attribute.String("mduck.telegram.command", "unknown"))
 
+			// NOTE: If it's the message is sent in a group, we don't want to spam
+			// the group with "Hey!" messages.
+			if r.GetChatID() != r.GetFromID() {
+				c.JSON(http.StatusOK, "")
+				return
+			}
+
 			res := tgram.NewMarkdownResponse("Hey\\! Just send me a picture with a receipt and I will do the rest\\!", r.GetChatID())
 			c.JSON(http.StatusOK, res)
 		}
